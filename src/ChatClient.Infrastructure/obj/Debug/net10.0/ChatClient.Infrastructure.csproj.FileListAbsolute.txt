@@ -1,0 +1,15 @@
+C:\Users\kietta\Documents\working\Chat-Group-Server\src\ChatClient.Infrastructure\bin\Debug\net10.0\ChatClient.Infrastructure.deps.json
+C:\Users\kietta\Documents\working\Chat-Group-Server\src\ChatClient.Infrastructure\bin\Debug\net10.0\ChatClient.Infrastructure.dll
+C:\Users\kietta\Documents\working\Chat-Group-Server\src\ChatClient.Infrastructure\bin\Debug\net10.0\ChatClient.Infrastructure.pdb
+C:\Users\kietta\Documents\working\Chat-Group-Server\src\ChatClient.Infrastructure\bin\Debug\net10.0\ChatClient.Business.dll
+C:\Users\kietta\Documents\working\Chat-Group-Server\src\ChatClient.Infrastructure\bin\Debug\net10.0\ChatClient.Business.pdb
+C:\Users\kietta\Documents\working\Chat-Group-Server\src\ChatClient.Infrastructure\obj\Debug\net10.0\ChatClient.Infrastructure.csproj.AssemblyReference.cache
+C:\Users\kietta\Documents\working\Chat-Group-Server\src\ChatClient.Infrastructure\obj\Debug\net10.0\ChatClient.Infrastructure.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\kietta\Documents\working\Chat-Group-Server\src\ChatClient.Infrastructure\obj\Debug\net10.0\ChatClient.Infrastructure.AssemblyInfoInputs.cache
+C:\Users\kietta\Documents\working\Chat-Group-Server\src\ChatClient.Infrastructure\obj\Debug\net10.0\ChatClient.Infrastructure.AssemblyInfo.cs
+C:\Users\kietta\Documents\working\Chat-Group-Server\src\ChatClient.Infrastructure\obj\Debug\net10.0\ChatClient.Infrastructure.csproj.CoreCompileInputs.cache
+C:\Users\kietta\Documents\working\Chat-Group-Server\src\ChatClient.Infrastructure\obj\Debug\net10.0\ChatClie.F59DFC09.Up2Date
+C:\Users\kietta\Documents\working\Chat-Group-Server\src\ChatClient.Infrastructure\obj\Debug\net10.0\ChatClient.Infrastructure.dll
+C:\Users\kietta\Documents\working\Chat-Group-Server\src\ChatClient.Infrastructure\obj\Debug\net10.0\refint\ChatClient.Infrastructure.dll
+C:\Users\kietta\Documents\working\Chat-Group-Server\src\ChatClient.Infrastructure\obj\Debug\net10.0\ChatClient.Infrastructure.pdb
+C:\Users\kietta\Documents\working\Chat-Group-Server\src\ChatClient.Infrastructure\obj\Debug\net10.0\ref\ChatClient.Infrastructure.dll

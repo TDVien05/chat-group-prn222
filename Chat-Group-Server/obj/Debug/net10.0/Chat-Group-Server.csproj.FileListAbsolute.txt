@@ -1,0 +1,14 @@
+C:\Users\kietta\Documents\working\Chat-Group-Server\Chat-Group-Server\bin\Debug\net10.0\Chat-Group-Server.exe
+C:\Users\kietta\Documents\working\Chat-Group-Server\Chat-Group-Server\bin\Debug\net10.0\Chat-Group-Server.deps.json
+C:\Users\kietta\Documents\working\Chat-Group-Server\Chat-Group-Server\bin\Debug\net10.0\Chat-Group-Server.runtimeconfig.json
+C:\Users\kietta\Documents\working\Chat-Group-Server\Chat-Group-Server\bin\Debug\net10.0\Chat-Group-Server.dll
+C:\Users\kietta\Documents\working\Chat-Group-Server\Chat-Group-Server\bin\Debug\net10.0\Chat-Group-Server.pdb
+C:\Users\kietta\Documents\working\Chat-Group-Server\Chat-Group-Server\obj\Debug\net10.0\Chat-Group-Server.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\kietta\Documents\working\Chat-Group-Server\Chat-Group-Server\obj\Debug\net10.0\Chat-Group-Server.AssemblyInfoInputs.cache
+C:\Users\kietta\Documents\working\Chat-Group-Server\Chat-Group-Server\obj\Debug\net10.0\Chat-Group-Server.AssemblyInfo.cs
+C:\Users\kietta\Documents\working\Chat-Group-Server\Chat-Group-Server\obj\Debug\net10.0\Chat-Group-Server.csproj.CoreCompileInputs.cache
+C:\Users\kietta\Documents\working\Chat-Group-Server\Chat-Group-Server\obj\Debug\net10.0\Chat-Group-Server.dll
+C:\Users\kietta\Documents\working\Chat-Group-Server\Chat-Group-Server\obj\Debug\net10.0\refint\Chat-Group-Server.dll
+C:\Users\kietta\Documents\working\Chat-Group-Server\Chat-Group-Server\obj\Debug\net10.0\Chat-Group-Server.pdb
+C:\Users\kietta\Documents\working\Chat-Group-Server\Chat-Group-Server\obj\Debug\net10.0\Chat-Group-Server.genruntimeconfig.cache
+C:\Users\kietta\Documents\working\Chat-Group-Server\Chat-Group-Server\obj\Debug\net10.0\ref\Chat-Group-Server.dll
