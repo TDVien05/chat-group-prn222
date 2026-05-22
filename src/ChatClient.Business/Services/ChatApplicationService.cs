@@ -33,6 +33,7 @@ public sealed class ChatApplicationService : IAsyncDisposable
     public bool IsConnected => _chatClient.IsConnected;
     public bool IsServerRunning => _chatServerHost.IsRunning;
     public int RunningPort => _chatServerHost.Port;
+    public string? FirewallHint => _chatServerHost.FirewallHint;
 
     public IReadOnlyList<string> GetShareableAddresses()
     {

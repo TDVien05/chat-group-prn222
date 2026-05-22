@@ -6,6 +6,7 @@ using System.Text.Json;
 using ChatClient.Business.Interfaces;
 using ChatClient.Business.Models;
 using ChatClient.Infrastructure.Dtos;
+using ChatClient.Infrastructure.Logging;
 using ChatClient.Infrastructure.Storage;
 
 namespace ChatClient.Infrastructure.Networking;
@@ -22,18 +23,29 @@ public sealed class TcpChatServerHost : IChatServerHost
 
     private readonly IChatHistoryRepository _historyRepository;
     private readonly IFileTransferStorage _fileStorage;
+    private readonly IServerLogger? _logger;
     private CancellationTokenSource? _serverCts;
     private TcpListener? _listener;
     private Task? _acceptLoopTask;
 
-    public TcpChatServerHost(IChatHistoryRepository historyRepository, IFileTransferStorage fileStorage)
+    public TcpChatServerHost(
+        IChatHistoryRepository historyRepository,
+        IFileTransferStorage fileStorage,
+        IServerLogger? logger = null)
     {
         _historyRepository = historyRepository;
         _fileStorage = fileStorage;
+        _logger = logger;
     }
 
     public bool IsRunning => _listener is not null;
     public int Port { get; private set; }
+
+    /// <summary>
+    /// Thông báo firewall (null = đã mở / không cần; khác null = cần mở thủ công).
+    /// Được set sau khi <see cref="StartAsync"/> hoàn thành.
+    /// </summary>
+    public string? FirewallHint { get; private set; }
 
     public Task StartAsync(ServerStartRequest request, CancellationToken cancellationToken = default)
     {
@@ -44,6 +56,14 @@ public sealed class TcpChatServerHost : IChatServerHost
         _listener = new TcpListener(IPAddress.Any, request.Port);
         _listener.Start();
         Port = request.Port;
+
+        // Tự động mở Windows Firewall cho port này
+        FirewallHint = FirewallHelper.EnsurePortOpen(request.Port);
+        if (FirewallHint is null)
+            _logger?.LogInfo($"Server started on port {request.Port}. Firewall rule OK.");
+        else
+            _logger?.LogWarning($"Server started on port {request.Port}. {FirewallHint}");
+
         _acceptLoopTask = AcceptLoopAsync(_serverCts.Token);
         return Task.CompletedTask;
     }
@@ -52,6 +72,7 @@ public sealed class TcpChatServerHost : IChatServerHost
     {
         if (_listener is null || _serverCts is null) return;
 
+        _logger?.LogInfo($"Server stopping. Active sessions: {_sessions.Count}.");
         _serverCts.Cancel();
         _listener.Stop();
 
@@ -89,11 +110,16 @@ public sealed class TcpChatServerHost : IChatServerHost
                 var tcpClient = await _listener.AcceptTcpClientAsync(cancellationToken);
                 var session = new ClientSession(tcpClient, _jsonOptions);
                 _sessions[session.Id] = session;
+                _logger?.LogInfo($"[CONNECT] IP={session.RemoteEndPoint} | SessionId={session.Id:N} | Active={_sessions.Count}");
                 _ = HandleClientAsync(session, cancellationToken);
             }
         }
         catch (OperationCanceledException) { }
         catch (ObjectDisposedException) { }
+        catch (Exception ex)
+        {
+            _logger?.LogError("AcceptLoop crashed unexpectedly.", ex);
+        }
     }
 
     private async Task HandleClientAsync(ClientSession session, CancellationToken cancellationToken)
@@ -115,14 +141,16 @@ public sealed class TcpChatServerHost : IChatServerHost
 
                 ChatEnvelopeDto? incoming;
                 try { incoming = JsonSerializer.Deserialize<ChatEnvelopeDto>(line, _jsonOptions); }
-                catch (JsonException)
+                catch (JsonException ex)
                 {
+                    _logger?.LogWarning($"[INVALID_JSON] IP={session.RemoteEndPoint} User={session.UserName ?? "?"} | {ex.Message}");
                     await session.SendAsync(new ChatEnvelopeDto { Type = "error", Content = "Invalid JSON payload.", Timestamp = DateTimeOffset.UtcNow }, cancellationToken);
                     continue;
                 }
 
                 if (incoming is null || string.IsNullOrWhiteSpace(incoming.Type))
                 {
+                    _logger?.LogWarning($"[MISSING_TYPE] IP={session.RemoteEndPoint} User={session.UserName ?? "?"}");
                     await session.SendAsync(new ChatEnvelopeDto { Type = "error", Content = "Message type is required.", Timestamp = DateTimeOffset.UtcNow }, cancellationToken);
                     continue;
                 }
@@ -153,6 +181,7 @@ public sealed class TcpChatServerHost : IChatServerHost
                         _ = HandleFileRequestAsync(session, incoming, cancellationToken);
                         break;
                     default:
+                        _logger?.LogWarning($"[UNSUPPORTED_TYPE] IP={session.RemoteEndPoint} User={session.UserName ?? "?"} Type='{incoming.Type}'");
                         await session.SendAsync(new ChatEnvelopeDto
                         {
                             Type = "error",
@@ -164,6 +193,10 @@ public sealed class TcpChatServerHost : IChatServerHost
             }
         }
         catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            _logger?.LogError($"[SESSION_ERROR] IP={session.RemoteEndPoint} User={session.UserName ?? "?"} Room={session.RoomName ?? "?"}", ex);
+        }
         finally
         {
             // Clean up any transfers from this session
@@ -177,6 +210,7 @@ public sealed class TcpChatServerHost : IChatServerHost
                     await t.DisposeAsync();
             }
             await RemoveFromRoomAsync(session, notifyRoom: true, CancellationToken.None);
+            _logger?.LogInfo($"[DISCONNECT] IP={session.RemoteEndPoint} User={session.UserName ?? "?"} Room={session.RoomName ?? "?"} | Remaining={_sessions.Count - 1}");
             _sessions.TryRemove(session.Id, out _);
             await session.DisposeAsync();
         }
@@ -186,6 +220,7 @@ public sealed class TcpChatServerHost : IChatServerHost
     {
         if (string.IsNullOrWhiteSpace(joinRequest.Room) || string.IsNullOrWhiteSpace(joinRequest.User))
         {
+            _logger?.LogWarning($"[JOIN_FAIL] IP={session.RemoteEndPoint} — missing room or user.");
             await session.SendAsync(new ChatEnvelopeDto { Type = "error", Content = "Join requires both room and user.", Timestamp = DateTimeOffset.UtcNow }, cancellationToken);
             return;
         }
@@ -199,6 +234,8 @@ public sealed class TcpChatServerHost : IChatServerHost
         room.Members[session.Id] = session;
         session.RoomName = roomName;
         session.UserName = userName;
+
+        _logger?.LogInfo($"[JOIN] User='{userName}' Room='{roomName}' IP={session.RemoteEndPoint} | Members={room.Members.Count}");
 
         await session.SendAsync(new ChatEnvelopeDto
         {
@@ -270,15 +307,19 @@ public sealed class TcpChatServerHost : IChatServerHost
     {
         if (string.IsNullOrWhiteSpace(session.RoomName) || string.IsNullOrWhiteSpace(session.UserName))
         {
+            _logger?.LogWarning($"[FILE_START_FAIL] IP={session.RemoteEndPoint} — not in a room.");
             await session.SendAsync(new ChatEnvelopeDto { Type = "error", Content = "Join a room before uploading files.", Timestamp = DateTimeOffset.UtcNow }, cancellationToken);
             return;
         }
 
         if (dto.TransferId is null || dto.FileName is null)
         {
+            _logger?.LogWarning($"[FILE_START_FAIL] IP={session.RemoteEndPoint} User={session.UserName} — missing transferId or fileName.");
             await session.SendAsync(new ChatEnvelopeDto { Type = "error", Content = "file-start requires transferId and fileName.", Timestamp = DateTimeOffset.UtcNow }, cancellationToken);
             return;
         }
+
+        _logger?.LogInfo($"[FILE_START] User='{session.UserName}' Room='{session.RoomName}' File='{dto.FileName}' Size={dto.FileSize:N0}B Chunks={dto.TotalChunks} TransferId={dto.TransferId}");
 
         var tempPath = Path.GetTempFileName();
         var transfer = new FileUploadTransfer
@@ -363,6 +404,7 @@ public sealed class TcpChatServerHost : IChatServerHost
 
             // Store file permanently
             await _fileStorage.StoreFileAsync(transfer.TempPath, transfer.TransferId, transfer.FileName, transfer.RoomName, cancellationToken);
+            _logger?.LogInfo($"[FILE_DONE] User='{transfer.UserName}' Room='{transfer.RoomName}' File='{transfer.FileName}' Size={transfer.BytesReceived:N0}B TransferId={transfer.TransferId}");
 
             // Broadcast file-ready to room
             if (_rooms.TryGetValue(transfer.RoomName, out var room))
@@ -429,6 +471,7 @@ public sealed class TcpChatServerHost : IChatServerHost
 
         if (!_fileStorage.FileExists(dto.TransferId))
         {
+            _logger?.LogWarning($"[FILE_REQUEST_FAIL] IP={session.RemoteEndPoint} User={session.UserName ?? "?"} TransferId={dto.TransferId} — file not found.");
             await session.SendAsync(new ChatEnvelopeDto
             {
                 Type = "error",
@@ -441,6 +484,7 @@ public sealed class TcpChatServerHost : IChatServerHost
         try
         {
             var (stream, fileSize, fileName) = await _fileStorage.OpenFileAsync(dto.TransferId, cancellationToken);
+            _logger?.LogInfo($"[FILE_SEND] User='{session.UserName ?? "?"}' IP={session.RemoteEndPoint} File='{fileName}' Size={fileSize:N0}B TransferId={dto.TransferId}");
             await using var fileStream = stream;
             const int ChunkSize = 512 * 1024;
             var buffer = new byte[ChunkSize];
@@ -472,14 +516,19 @@ public sealed class TcpChatServerHost : IChatServerHost
                 if (isLast) break;
             }
         }
-        catch (FileNotFoundException)
+        catch (FileNotFoundException ex)
         {
+            _logger?.LogError($"[FILE_SEND_ERROR] IP={session.RemoteEndPoint} TransferId={dto.TransferId}", ex);
             await session.SendAsync(new ChatEnvelopeDto
             {
                 Type = "error",
                 Content = "File not found on server.",
                 Timestamp = DateTimeOffset.UtcNow
             }, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError($"[FILE_SEND_ERROR] IP={session.RemoteEndPoint} User={session.UserName ?? "?"} TransferId={dto.TransferId}", ex);
         }
     }
 
@@ -493,6 +542,7 @@ public sealed class TcpChatServerHost : IChatServerHost
         if (_rooms.TryGetValue(roomName, out var room))
         {
             room.Members.TryRemove(session.Id, out _);
+            _logger?.LogInfo($"[LEAVE] User='{userName ?? "?"}' Room='{roomName}' IP={session.RemoteEndPoint} | Remaining members={room.Members.Count}");
 
             if (notifyRoom && !string.IsNullOrWhiteSpace(userName))
             {
@@ -509,7 +559,10 @@ public sealed class TcpChatServerHost : IChatServerHost
             }
 
             if (room.Members.IsEmpty)
+            {
                 _rooms.TryRemove(room.Name, out _);
+                _logger?.LogInfo($"[ROOM_EMPTY] Room '{roomName}' removed (no more members).");
+            }
         }
 
         session.RoomName = null;
@@ -582,12 +635,14 @@ public sealed class TcpChatServerHost : IChatServerHost
             Id = Guid.NewGuid();
             _tcpClient = tcpClient;
             _jsonOptions = jsonOptions;
+            RemoteEndPoint = tcpClient.Client.RemoteEndPoint?.ToString() ?? "unknown";
             var stream = tcpClient.GetStream();
             Reader = new StreamReader(stream, Encoding.UTF8, bufferSize: 1024 * 1024);
             Writer = new StreamWriter(stream, new UTF8Encoding(false)) { AutoFlush = true };
         }
 
         public Guid Id { get; }
+        public string RemoteEndPoint { get; }   // IP:port của client
         public StreamReader Reader { get; }
         public StreamWriter Writer { get; }
         public string? RoomName { get; set; }

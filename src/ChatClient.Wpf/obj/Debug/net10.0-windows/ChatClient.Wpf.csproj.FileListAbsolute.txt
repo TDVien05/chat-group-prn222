@@ -26,3 +26,8 @@ C:\Users\kietta\Documents\working\Chat-Group-Server\src\ChatClient.Wpf\obj\Debug
 C:\Users\kietta\Documents\working\Chat-Group-Server\src\ChatClient.Wpf\obj\Debug\net10.0-windows\ChatClient.Wpf.genruntimeconfig.cache
 C:\Users\kietta\Documents\working\Chat-Group-Server\src\ChatClient.Wpf\obj\Debug\net10.0-windows\ref\ChatClient.Wpf.dll
 C:\Users\kietta\Documents\working\Chat-Group-Server\src\ChatClient.Wpf\obj\Debug\net10.0-windows\ChatClient.Wpf.sourcelink.json
+C:\Users\kietta\AppData\Local\Temp\chat_build_check2\ChatClient.Wpf.exe
+C:\Users\kietta\AppData\Local\Temp\chat_build_check2\ChatClient.Wpf.deps.json
+C:\Users\kietta\AppData\Local\Temp\chat_build_check2\ChatClient.Wpf.runtimeconfig.json
+C:\Users\kietta\AppData\Local\Temp\chat_build_check2\ChatClient.Wpf.dll
+C:\Users\kietta\AppData\Local\Temp\chat_build_check2\ChatClient.Wpf.pdb

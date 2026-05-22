@@ -19,3 +19,13 @@ C:\Users\kietta\Documents\working\Chat-Group-Server\src\ChatServer.Console\obj\D
 C:\Users\kietta\Documents\working\Chat-Group-Server\src\ChatServer.Console\obj\Debug\net10.0\ChatServer.Console.genruntimeconfig.cache
 C:\Users\kietta\Documents\working\Chat-Group-Server\src\ChatServer.Console\obj\Debug\net10.0\ref\ChatServer.Console.dll
 C:\Users\kietta\Documents\working\Chat-Group-Server\src\ChatServer.Console\obj\Debug\net10.0\ChatServer.Console.sourcelink.json
+C:\Users\kietta\AppData\Local\Temp\chat_build_check\ChatServer.Console.exe
+C:\Users\kietta\AppData\Local\Temp\chat_build_check\ChatServer.Console.deps.json
+C:\Users\kietta\AppData\Local\Temp\chat_build_check\ChatServer.Console.runtimeconfig.json
+C:\Users\kietta\AppData\Local\Temp\chat_build_check\ChatServer.Console.dll
+C:\Users\kietta\AppData\Local\Temp\chat_build_check\ChatServer.Console.pdb
+C:\Users\kietta\AppData\Local\Temp\chat_build_check2\ChatServer.Console.exe
+C:\Users\kietta\AppData\Local\Temp\chat_build_check2\ChatServer.Console.deps.json
+C:\Users\kietta\AppData\Local\Temp\chat_build_check2\ChatServer.Console.runtimeconfig.json
+C:\Users\kietta\AppData\Local\Temp\chat_build_check2\ChatServer.Console.dll
+C:\Users\kietta\AppData\Local\Temp\chat_build_check2\ChatServer.Console.pdb

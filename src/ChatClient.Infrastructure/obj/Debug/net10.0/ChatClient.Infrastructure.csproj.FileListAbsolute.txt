@@ -14,3 +14,9 @@ C:\Users\kietta\Documents\working\Chat-Group-Server\src\ChatClient.Infrastructur
 C:\Users\kietta\Documents\working\Chat-Group-Server\src\ChatClient.Infrastructure\obj\Debug\net10.0\ChatClient.Infrastructure.pdb
 C:\Users\kietta\Documents\working\Chat-Group-Server\src\ChatClient.Infrastructure\obj\Debug\net10.0\ref\ChatClient.Infrastructure.dll
 C:\Users\kietta\Documents\working\Chat-Group-Server\src\ChatClient.Infrastructure\obj\Debug\net10.0\ChatClient.Infrastructure.sourcelink.json
+C:\Users\kietta\AppData\Local\Temp\chat_build_check\ChatClient.Infrastructure.deps.json
+C:\Users\kietta\AppData\Local\Temp\chat_build_check\ChatClient.Infrastructure.dll
+C:\Users\kietta\AppData\Local\Temp\chat_build_check\ChatClient.Infrastructure.pdb
+C:\Users\kietta\AppData\Local\Temp\chat_build_check2\ChatClient.Infrastructure.deps.json
+C:\Users\kietta\AppData\Local\Temp\chat_build_check2\ChatClient.Infrastructure.dll
+C:\Users\kietta\AppData\Local\Temp\chat_build_check2\ChatClient.Infrastructure.pdb

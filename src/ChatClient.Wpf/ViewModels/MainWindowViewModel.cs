@@ -194,7 +194,11 @@ public sealed class MainWindowViewModel : ViewModelBase
             HostAddresses.Clear();
             foreach (var address in _applicationService.GetShareableAddresses())
                 HostAddresses.Add(address);
-            StatusText = "Server is running. Share one of the listed IP addresses.";
+
+            // Nếu firewall chưa được mở tự động → hiện hướng dẫn
+            StatusText = _applicationService.FirewallHint is not null
+                ? $"⚠️ Server đã chạy nhưng cần mở Firewall thủ công:\n{_applicationService.FirewallHint}"
+                : "Server is running. Share one of the listed IP addresses.";
         }
         catch (Exception ex)
         {
