@@ -9,6 +9,7 @@ using ChatClient.Business.Services;
 using ChatClient.Business.Validation;
 using ChatClient.Wpf.Commands;
 using Microsoft.Win32;
+using System.Globalization;
 
 namespace ChatClient.Wpf.ViewModels;
 
@@ -47,14 +48,25 @@ public sealed class MainWindowViewModel : ViewModelBase
         ConnectCommand = new AsyncRelayCommand(ConnectAsync);
         DisconnectCommand = new AsyncRelayCommand(DisconnectAsync);
         SendMessageCommand = new AsyncRelayCommand(SendMessageAsync, () => !string.IsNullOrWhiteSpace(OutgoingMessage));
-        SendThumbsUpCommand = new AsyncRelayCommand(() => SendIconAsync("\U0001F44D", "thumbs-up"));
-        SendHeartCommand = new AsyncRelayCommand(() => SendIconAsync("❤️", "heart"));
-        SendLaughCommand = new AsyncRelayCommand(() => SendIconAsync("\U0001F602", "laugh"));
-        SendSurprisedCommand = new AsyncRelayCommand(() => SendIconAsync("\U0001F62E", "surprised"));
         ChooseImageCommand = new AsyncRelayCommand(ChooseImageAsync);
         ClearSelectedImageCommand = new AsyncRelayCommand(ClearSelectedImageAsync, () => HasPendingImage);
         SendImageCommand = new AsyncRelayCommand(SendImageAsync, () => HasPendingImage);
         SendFileCommand = new AsyncRelayCommand(SendFileAsync);
+
+        // Xây danh sách emoji — mỗi item mang sẵn command đã capture glyph + name
+        Emojis = EmojiDefs
+            .Select(static e => (e.Glyph, e.Name, e.Hex))
+            .Select(e => new EmojiItemViewModel
+            {
+                Glyph           = e.Glyph,
+                Name            = e.Name,
+                ButtonBackground = new SolidColorBrush(
+                    (Color)ColorConverter.ConvertFromString(e.Hex)),
+                Command = new AsyncRelayCommand(
+                    () => SendIconAsync(e.Glyph, e.Name))
+            })
+            .ToList()
+            .AsReadOnly();
 
         _applicationService.MessageReceived += ApplicationService_MessageReceived;
         _applicationService.ConnectionClosed += ApplicationService_ConnectionClosed;
@@ -62,19 +74,57 @@ public sealed class MainWindowViewModel : ViewModelBase
         _applicationService.FileDownloadProgressChanged += ApplicationService_FileDownloadProgressChanged;
     }
 
+    // ── Emoji definitions: (glyph, name, hex color) ─────────────────────────
+    private static readonly (string Glyph, string Name, string Hex)[] EmojiDefs =
+    [
+        // Cảm xúc tích cực
+        ("👍", "Thích",        "#43A047"),
+        ("❤️", "Trái tim",     "#E91E63"),
+        ("🔥", "Bùng cháy",    "#FB8C00"),
+        ("🎉", "Ăn mừng",      "#8E24AA"),
+        ("💯", "100 điểm",     "#C62828"),
+        ("⭐", "Sao",          "#F9A825"),
+        // Mặt cười
+        ("😂", "Cười",         "#F9A825"),
+        ("🤣", "Lăn ra cười",  "#F57F17"),
+        ("🥰", "Yêu",          "#AD1457"),
+        ("😎", "Ngầu",         "#00897B"),
+        ("🤩", "Choáng ngợp",  "#7B1FA2"),
+        ("😄", "Vui vẻ",       "#2E7D32"),
+        // Cảm xúc khác
+        ("😢", "Buồn",         "#1E88E5"),
+        ("😡", "Tức giận",     "#B71C1C"),
+        ("😮", "Bất ngờ",      "#6A1B9A"),
+        ("🤔", "Suy nghĩ",     "#EF6C00"),
+        ("😴", "Ngủ",          "#283593"),
+        ("🤮", "Ghê",          "#558B2F"),
+        ("😏", "Nhếch mép",    "#4E342E"),
+        ("😇", "Thiên thần",   "#0277BD"),
+        // Hành động & cử chỉ
+        ("👏", "Vỗ tay",       "#E65100"),
+        ("🙏", "Cảm ơn",       "#2E7D32"),
+        ("💪", "Mạnh mẽ",      "#BF360C"),
+        ("👎", "Không thích",  "#E53935"),
+        // Vật thể & biểu tượng
+        ("✅", "Đồng ý",       "#1B5E20"),
+        ("❌", "Không",        "#B71C1C"),
+        ("🚀", "Rocket",       "#0D47A1"),
+        ("💡", "Ý tưởng",     "#E65100"),
+        ("🎵", "Âm nhạc",      "#4A148C"),
+        ("🌈", "Cầu vồng",     "#00838F"),
+    ];
+    // ─────────────────────────────────────────────────────────────────────────
+
     public ObservableCollection<ChatMessageItemViewModel> Messages { get; } = [];
     public ObservableCollection<string> HostAddresses { get; } = [];
     public ObservableCollection<FileTransferItemViewModel> ActiveTransfers { get; } = [];
+    public IReadOnlyList<EmojiItemViewModel> Emojis { get; }
 
     public AsyncRelayCommand StartServerCommand { get; }
     public AsyncRelayCommand StopServerCommand { get; }
     public AsyncRelayCommand ConnectCommand { get; }
     public AsyncRelayCommand DisconnectCommand { get; }
     public AsyncRelayCommand SendMessageCommand { get; }
-    public AsyncRelayCommand SendThumbsUpCommand { get; }
-    public AsyncRelayCommand SendHeartCommand { get; }
-    public AsyncRelayCommand SendLaughCommand { get; }
-    public AsyncRelayCommand SendSurprisedCommand { get; }
     public AsyncRelayCommand ChooseImageCommand { get; }
     public AsyncRelayCommand ClearSelectedImageCommand { get; }
     public AsyncRelayCommand SendImageCommand { get; }

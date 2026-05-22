@@ -16,3 +16,9 @@ C:\Users\kietta\AppData\Local\Temp\chat_build_check\ChatClient.Business.pdb
 C:\Users\kietta\AppData\Local\Temp\chat_build_check2\ChatClient.Business.deps.json
 C:\Users\kietta\AppData\Local\Temp\chat_build_check2\ChatClient.Business.dll
 C:\Users\kietta\AppData\Local\Temp\chat_build_check2\ChatClient.Business.pdb
+C:\Users\kietta\AppData\Local\Temp\chat_wpf_build\ChatClient.Business.deps.json
+C:\Users\kietta\AppData\Local\Temp\chat_wpf_build\ChatClient.Business.dll
+C:\Users\kietta\AppData\Local\Temp\chat_wpf_build\ChatClient.Business.pdb
+C:\Users\kietta\AppData\Local\Temp\chat_wpf_build2\ChatClient.Business.deps.json
+C:\Users\kietta\AppData\Local\Temp\chat_wpf_build2\ChatClient.Business.dll
+C:\Users\kietta\AppData\Local\Temp\chat_wpf_build2\ChatClient.Business.pdb

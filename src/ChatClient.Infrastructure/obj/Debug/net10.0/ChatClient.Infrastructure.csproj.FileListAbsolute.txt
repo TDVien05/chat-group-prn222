@@ -20,3 +20,9 @@ C:\Users\kietta\AppData\Local\Temp\chat_build_check\ChatClient.Infrastructure.pd
 C:\Users\kietta\AppData\Local\Temp\chat_build_check2\ChatClient.Infrastructure.deps.json
 C:\Users\kietta\AppData\Local\Temp\chat_build_check2\ChatClient.Infrastructure.dll
 C:\Users\kietta\AppData\Local\Temp\chat_build_check2\ChatClient.Infrastructure.pdb
+C:\Users\kietta\AppData\Local\Temp\chat_wpf_build\ChatClient.Infrastructure.deps.json
+C:\Users\kietta\AppData\Local\Temp\chat_wpf_build\ChatClient.Infrastructure.dll
+C:\Users\kietta\AppData\Local\Temp\chat_wpf_build\ChatClient.Infrastructure.pdb
+C:\Users\kietta\AppData\Local\Temp\chat_wpf_build2\ChatClient.Infrastructure.deps.json
+C:\Users\kietta\AppData\Local\Temp\chat_wpf_build2\ChatClient.Infrastructure.dll
+C:\Users\kietta\AppData\Local\Temp\chat_wpf_build2\ChatClient.Infrastructure.pdb

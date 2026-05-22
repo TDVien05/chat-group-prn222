@@ -70,6 +70,39 @@
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Margin" Value="0,4,0,0" />
         </Style>
+
+        <!-- Nút emoji có màu nền động, bo góc, hiệu ứng hover/press -->
+        <Style x:Key="EmojiButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="46" />
+            <Setter Property="Height" Value="46" />
+            <Setter Property="Margin" Value="3,3,3,3" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="FontFamily" Value="Segoe UI Emoji" />
+            <Setter Property="FontSize" Value="24" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="14"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Opacity" Value="0.80" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Opacity" Value="0.55" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
     <Grid Margin="20">
         <Grid.ColumnDefinitions>
@@ -330,10 +363,10 @@
                                                          Maximum="100" />
                                         </StackPanel>
 
-                                        <!-- TEXT / ICON message -->
+                                        <!-- TEXT / ICON message (icon hiện to hơn qua BodyFontSize) -->
                                         <TextBlock Margin="0,4,0,0"
                                                    Text="{Binding Body}"
-                                                   FontSize="15"
+                                                   FontSize="{Binding BodyFontSize}"
                                                    FontFamily="Segoe UI Emoji"
                                                    Foreground="{Binding ForegroundBrush}"
                                                    TextWrapping="Wrap"
@@ -360,14 +393,37 @@
                         </Grid.RowDefinitions>
 
                         <!-- Emoji + action buttons -->
-                        <WrapPanel>
-                            <Button Width="48" Height="44" Margin="0,0,8,0" FontFamily="Segoe UI Emoji" Content="&#x1F44D;" Command="{Binding SendThumbsUpCommand}" />
-                            <Button Width="48" Height="44" Margin="0,0,8,0" FontFamily="Segoe UI Emoji" Content="&#x2764;&#xFE0F;" Command="{Binding SendHeartCommand}" />
-                            <Button Width="48" Height="44" Margin="0,0,8,0" FontFamily="Segoe UI Emoji" Content="&#x1F602;" Command="{Binding SendLaughCommand}" />
-                            <Button Width="48" Height="44" Margin="0,0,8,0" FontFamily="Segoe UI Emoji" Content="&#x1F62E;" Command="{Binding SendSurprisedCommand}" />
-                            <Button Margin="8,0,0,0" Content="&#x1F5BC; Image" Command="{Binding ChooseImageCommand}" />
-                            <Button Margin="8,0,0,0" Content="&#x1F4CE; Send File" Command="{Binding SendFileCommand}" Background="{StaticResource PrimaryDarkBrush}" />
-                        </WrapPanel>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <!-- Hàng 1: nút Image / File -->
+                            <WrapPanel>
+                                <Button Margin="0,0,8,0" Content="&#x1F5BC; Image" Command="{Binding ChooseImageCommand}" />
+                                <Button Margin="0,0,0,0" Content="&#x1F4CE; Send File" Command="{Binding SendFileCommand}" Background="{StaticResource PrimaryDarkBrush}" />
+                            </WrapPanel>
+
+                            <!-- Hàng 2: lưới emoji màu sắc -->
+                            <ItemsControl Grid.Row="1" Margin="0,8,0,0"
+                                          ItemsSource="{Binding Emojis}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type viewModels:EmojiItemViewModel}">
+                                        <Button Content="{Binding Glyph}"
+                                                Background="{Binding ButtonBackground}"
+                                                Command="{Binding Command}"
+                                                Style="{StaticResource EmojiButtonStyle}"
+                                                ToolTip="{Binding Name}" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Grid>
 
                         <!-- Image preview panel -->
                         <Border Grid.Row="1"
