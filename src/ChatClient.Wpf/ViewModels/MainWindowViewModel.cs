@@ -23,6 +23,17 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string _activeRoomTitle = "No room connected";
     private string _connectionBadge = "Offline";
     private string _hostPort = "5000";
+    private bool _isEmojiPickerOpen;
+    private bool _isConnectionLostDialogOpen;
+    private bool _isConnected;
+    private bool _userInitiatedDisconnect;
+    private string _lastConnectedHost = string.Empty;
+    private int _lastConnectedPort;
+    private string _lastConnectedRoom = string.Empty;
+    private string _lastConnectedUser = string.Empty;
+    private string _connectionLostReason = string.Empty;
+    private string _currentTheme = "Light";
+    private readonly List<ChatMessage> _rawMessages = [];
     private string _outgoingMessage = string.Empty;
     private string _roomName = "general";
     private string _selectedImageFileName = string.Empty;
@@ -52,6 +63,12 @@ public sealed class MainWindowViewModel : ViewModelBase
         ClearSelectedImageCommand = new AsyncRelayCommand(ClearSelectedImageAsync, () => HasPendingImage);
         SendImageCommand = new AsyncRelayCommand(SendImageAsync, () => HasPendingImage);
         SendFileCommand = new AsyncRelayCommand(SendFileAsync);
+        ToggleEmojiPickerCommand = new RelayCommand(() => IsEmojiPickerOpen = !IsEmojiPickerOpen);
+        ReconnectCommand = new AsyncRelayCommand(ReconnectAsync);
+        DismissConnectionLostCommand = new RelayCommand(() => IsConnectionLostDialogOpen = false);
+        SetLightThemeCommand    = new RelayCommand(() => ApplyTheme("Light"));
+        SetDarkThemeCommand     = new RelayCommand(() => ApplyTheme("Dark"));
+        SetMidnightThemeCommand = new RelayCommand(() => ApplyTheme("Midnight"));
 
         // Xây danh sách emoji — mỗi item mang sẵn command đã capture glyph + name
         Emojis = EmojiDefs
@@ -129,6 +146,12 @@ public sealed class MainWindowViewModel : ViewModelBase
     public AsyncRelayCommand ClearSelectedImageCommand { get; }
     public AsyncRelayCommand SendImageCommand { get; }
     public AsyncRelayCommand SendFileCommand { get; }
+    public RelayCommand ToggleEmojiPickerCommand { get; }
+    public AsyncRelayCommand ReconnectCommand { get; }
+    public RelayCommand DismissConnectionLostCommand { get; }
+    public RelayCommand SetLightThemeCommand    { get; }
+    public RelayCommand SetDarkThemeCommand     { get; }
+    public RelayCommand SetMidnightThemeCommand { get; }
 
     public string HostPort
     {
@@ -166,7 +189,10 @@ public sealed class MainWindowViewModel : ViewModelBase
         set
         {
             if (SetProperty(ref _outgoingMessage, value))
+            {
                 SendMessageCommand.RaiseCanExecuteChanged();
+                OnPropertyChanged(nameof(IsOutgoingMessageEmpty));
+            }
         }
     }
 
@@ -212,6 +238,10 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     public bool HasPendingImage => SelectedImagePreview is not null;
     public bool HasActiveTransfers => ActiveTransfers.Count > 0;
+    public bool IsLightTheme    => _currentTheme == "Light";
+    public bool IsDarkTheme     => _currentTheme == "Dark";
+    public bool IsMidnightTheme => _currentTheme == "Midnight";
+    public bool IsOutgoingMessageEmpty => string.IsNullOrEmpty(_outgoingMessage);
 
     public ImageSource? ViewerImageSource
     {
@@ -231,6 +261,29 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     public bool IsImageViewerOpen => ViewerImageSource is not null;
 
+    public bool IsEmojiPickerOpen
+    {
+        get => _isEmojiPickerOpen;
+        set => SetProperty(ref _isEmojiPickerOpen, value);
+    }
+
+    public bool IsConnectionLostDialogOpen
+    {
+        get => _isConnectionLostDialogOpen;
+        set => SetProperty(ref _isConnectionLostDialogOpen, value);
+    }
+
+    public string ConnectionLostReason
+    {
+        get => _connectionLostReason;
+        private set => SetProperty(ref _connectionLostReason, value);
+    }
+
+    /// <summary>IP:Port hiển thị trong dialog để người dùng biết đang kết nối lại vào đâu.</summary>
+    public string LastConnectionInfo =>
+        string.IsNullOrWhiteSpace(_lastConnectedHost) ? string.Empty
+        : $"{_lastConnectedHost}:{_lastConnectedPort}  ·  #{_lastConnectedRoom}";
+
     private async Task StartServerAsync()
     {
         if (!PortValidator.TryParse(HostPort, out var port))
@@ -240,6 +293,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
         try
         {
+            StatusText = "Đang khởi động server — có thể xuất hiện hộp thoại xin quyền Firewall…";
             await _applicationService.StartServerAsync(new ServerStartRequest { Port = port });
             HostAddresses.Clear();
             foreach (var address in _applicationService.GetShareableAddresses())
@@ -281,20 +335,36 @@ public sealed class MainWindowViewModel : ViewModelBase
         try
         {
             Messages.Clear();
+            _rawMessages.Clear();
             await _applicationService.ConnectAsync(request);
+
+            // Lưu thông tin kết nối để dùng cho chức năng kết nối lại
+            _isConnected = true;
+            _userInitiatedDisconnect = false;
+            _lastConnectedHost = request.Host;
+            _lastConnectedPort = port;
+            _lastConnectedRoom = request.RoomName;
+            _lastConnectedUser = request.UserName;
+            OnPropertyChanged(nameof(LastConnectionInfo));
+
             ConnectionBadge = "Connected";
             ActiveRoomTitle = $"#{request.RoomName}";
             StatusText = $"Connected to {request.Host}:{request.Port} as {request.UserName}.";
         }
         catch (Exception ex)
         {
+            _isConnected = false;
             ConnectionBadge = "Offline";
             ActiveRoomTitle = "No room connected";
             StatusText = $"Unable to connect: {ex.Message}";
         }
     }
 
-    private Task DisconnectAsync() => _applicationService.DisconnectAsync();
+    private async Task DisconnectAsync()
+    {
+        _userInitiatedDisconnect = true; // Tránh hiện dialog khi người dùng tự ngắt
+        await _applicationService.DisconnectAsync();
+    }
 
     private async Task SendMessageAsync()
     {
@@ -412,8 +482,47 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private async Task SendIconAsync(string glyph, string iconName)
     {
-        try { await _applicationService.SendIconMessageAsync(glyph, iconName); }
+        try
+        {
+            await _applicationService.SendIconMessageAsync(glyph, iconName);
+            IsEmojiPickerOpen = false; // Đóng picker sau khi gửi emoji
+        }
         catch (Exception ex) { StatusText = $"Icon send failed: {ex.Message}"; }
+    }
+
+    private async Task ReconnectAsync()
+    {
+        IsConnectionLostDialogOpen = false;
+
+        if (string.IsNullOrWhiteSpace(_lastConnectedHost) || _lastConnectedPort <= 0) return;
+
+        var request = new ClientConnectionRequest
+        {
+            Host     = _lastConnectedHost,
+            Port     = _lastConnectedPort,
+            RoomName = _lastConnectedRoom,
+            UserName = _lastConnectedUser
+        };
+        try
+        {
+            StatusText = $"Đang kết nối lại {request.Host}:{request.Port}…";
+            Messages.Clear();
+            _rawMessages.Clear();
+            await _applicationService.ConnectAsync(request);
+
+            _isConnected = true;
+            _userInitiatedDisconnect = false;
+            ConnectionBadge = "Connected";
+            ActiveRoomTitle = $"#{request.RoomName}";
+            StatusText = $"Đã kết nối lại {request.Host}:{request.Port} với tư cách {request.UserName}.";
+        }
+        catch (Exception ex)
+        {
+            _isConnected = false;
+            ConnectionBadge = "Offline";
+            ActiveRoomTitle = "No room connected";
+            StatusText = $"Kết nối lại thất bại: {ex.Message}";
+        }
     }
 
     private void ApplicationService_MessageReceived(object? sender, ChatMessage message)
@@ -438,11 +547,17 @@ public sealed class MainWindowViewModel : ViewModelBase
                 {
                     var idx = Messages.IndexOf(existing);
                     Messages[idx] = ChatMessageItemViewModel.FromMessage(message, UserName.Trim());
+                    var rawIdx = _rawMessages.FindLastIndex(m =>
+                        string.Equals(m.Type, "file-progress", StringComparison.OrdinalIgnoreCase) &&
+                        m.TransferId == message.TransferId);
+                    if (rawIdx >= 0) _rawMessages[rawIdx] = message;
+                    else _rawMessages.Add(message);
                     return;
                 }
             }
 
             Messages.Add(ChatMessageItemViewModel.FromMessage(message, UserName.Trim()));
+            _rawMessages.Add(message);
         });
     }
 
@@ -450,9 +565,22 @@ public sealed class MainWindowViewModel : ViewModelBase
     {
         Application.Current.Dispatcher.Invoke(() =>
         {
+            var wasConnected = _isConnected;
+            var wasUserInitiated = _userInitiatedDisconnect;
+
+            _isConnected = false;
+            _userInitiatedDisconnect = false;
+
             ConnectionBadge = "Offline";
             ActiveRoomTitle = "No room connected";
             StatusText = reason;
+
+            // Chỉ hiện dialog khi mất kết nối bất ngờ (không phải do người dùng chủ động ngắt)
+            if (wasConnected && !wasUserInitiated)
+            {
+                ConnectionLostReason = reason;
+                IsConnectionLostDialogOpen = true;
+            }
         });
     }
 
@@ -587,6 +715,36 @@ public sealed class MainWindowViewModel : ViewModelBase
         < 1024L * 1024 * 1024 => $"{bytes / (1024.0 * 1024):F1} MB",
         _ => $"{bytes / (1024.0 * 1024 * 1024):F2} GB"
     };
+
+    private void ApplyTheme(string themeName)
+    {
+        _currentTheme = themeName;
+
+        var resources = Application.Current.Resources.MergedDictionaries;
+        var themeDict = resources.FirstOrDefault(d =>
+            d.Source?.OriginalString.Contains("/Themes/") == true);
+        if (themeDict is not null)
+            resources.Remove(themeDict);
+
+        resources.Add(new ResourceDictionary
+        {
+            Source = new Uri($"pack://application:,,,/Themes/{themeName}.xaml", UriKind.Absolute)
+        });
+
+        OnPropertyChanged(nameof(IsLightTheme));
+        OnPropertyChanged(nameof(IsDarkTheme));
+        OnPropertyChanged(nameof(IsMidnightTheme));
+
+        RebuildMessages();
+    }
+
+    private void RebuildMessages()
+    {
+        var currentUserName = UserName.Trim();
+        Messages.Clear();
+        foreach (var msg in _rawMessages)
+            Messages.Add(ChatMessageItemViewModel.FromMessage(msg, currentUserName));
+    }
 
     public void OpenImageViewer(ImageSource? imageSource, string? fileName)
     {

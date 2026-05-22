@@ -1,0 +1,45 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ══ Dark Mode ════════════════════════════════════════════════ -->
+
+    <!-- Surfaces -->
+    <SolidColorBrush x:Key="AppWindowBrush"        Color="#18191A" />
+    <SolidColorBrush x:Key="SidebarBgBrush"        Color="#242526" />
+    <SolidColorBrush x:Key="ChatBgBrush"           Color="#1C1C1D" />
+    <SolidColorBrush x:Key="PanelBrush"            Color="#242526" />
+    <SolidColorBrush x:Key="CardBrush"             Color="#3A3B3C" />
+    <SolidColorBrush x:Key="InputBgBrush"          Color="#2D2E2F" />
+    <SolidColorBrush x:Key="InputBorderBrush"      Color="#636567" />
+
+    <!-- Brand / accent -->
+    <SolidColorBrush x:Key="PrimaryBrush"          Color="#2D88FF" />
+    <SolidColorBrush x:Key="PrimaryDarkBrush"      Color="#0060BF" />
+    <SolidColorBrush x:Key="DeepAccentBrush"       Color="#2D88FF" />
+    <SolidColorBrush x:Key="SurfaceTintBrush"      Color="#263246" />
+    <SolidColorBrush x:Key="SurfaceBorderBrush"    Color="#1E4080" />
+
+    <!-- Text -->
+    <SolidColorBrush x:Key="TitleBrush"            Color="#E4E6EB" />
+    <SolidColorBrush x:Key="BodyBrush"             Color="#B0B3B8" />
+    <SolidColorBrush x:Key="AddressBrush"          Color="#4FB3FF" />
+
+    <!-- Structural -->
+    <SolidColorBrush x:Key="DividerBrush"          Color="#3E4042" />
+    <SolidColorBrush x:Key="HoverBrush"            Color="#4A4B4C" />
+
+    <!-- Chat bubbles -->
+    <SolidColorBrush x:Key="OwnBubbleBrush"        Color="#0069D9" />
+    <SolidColorBrush x:Key="IncomingBubbleBrush"   Color="#3A3B3C" />
+    <SolidColorBrush x:Key="SystemBubbleBrush"     Color="#1D4C8C" />
+    <SolidColorBrush x:Key="OwnBubbleForeground"   Color="#FFFFFF" />
+    <SolidColorBrush x:Key="IncomingBubbleForeground" Color="#E4E6EB" />
+    <SolidColorBrush x:Key="MetaForeground"        Color="#8A8D94" />
+
+    <!-- File-transfer panel -->
+    <SolidColorBrush x:Key="TransferCardBrush"     Color="#2D2F33" />
+    <SolidColorBrush x:Key="TransferItemBrush"     Color="#3A3B3C" />
+    <SolidColorBrush x:Key="TransferTextBrush"     Color="#E4E6EB" />
+    <SolidColorBrush x:Key="TransferMetaBrush"     Color="#8A8D94" />
+
+</ResourceDictionary>

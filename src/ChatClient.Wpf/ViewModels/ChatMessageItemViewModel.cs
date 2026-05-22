@@ -29,6 +29,10 @@ public sealed class ChatMessageItemViewModel
     /// <summary>Hiển thị emoji to hơn, text bình thường nhỏ hơn.</summary>
     public double BodyFontSize => IsIcon ? 52 : 15;
 
+    /// <summary>Tên người gửi: tin của mình căn phải, tin người khác căn trái.</summary>
+    public HorizontalAlignment SenderNameAlignment =>
+        Alignment == HorizontalAlignment.Right ? HorizontalAlignment.Right : HorizontalAlignment.Left;
+
     /// <summary>Text / icon dùng chung template nhưng font size khác nhau.</summary>
     public bool IsText => !IsImage && !IsFile && !IsFileProgress;
 
@@ -60,14 +64,16 @@ public sealed class ChatMessageItemViewModel
             BubbleBrush = ResolveBubbleBrush(isSystem, isOwn, isFileReady, isIcon),
             ForegroundBrush = isSystem
                 ? Brushes.White
-                : new SolidColorBrush(Color.FromRgb(20, 54, 84)),
-            MetaBrush   = isSystem
+                : (isOwn
+                    ? GetResourceBrush("OwnBubbleForeground")      ?? new SolidColorBrush(Color.FromRgb(20, 54, 84))
+                    : GetResourceBrush("IncomingBubbleForeground") ?? new SolidColorBrush(Color.FromRgb(20, 54, 84))),
+            MetaBrush = isSystem
                 ? new SolidColorBrush(Color.FromRgb(221, 241, 255))
-                : new SolidColorBrush(Color.FromRgb(101, 128, 153)),
+                : GetResourceBrush("MetaForeground") ?? new SolidColorBrush(Color.FromRgb(101, 128, 153)),
             Alignment   = isSystem || isFileProgress
                 ? HorizontalAlignment.Center
                 : (isOwn ? HorizontalAlignment.Right : HorizontalAlignment.Left),
-            ShowSender  = !isSystem && !isOwn && !isFileProgress,
+            ShowSender  = !isSystem && !isFileProgress,
             FileName    = message.FileName,
             TransferId  = message.TransferId,
             FileSize    = message.FileSize,
@@ -80,13 +86,16 @@ public sealed class ChatMessageItemViewModel
         };
     }
 
+    private static Brush? GetResourceBrush(string key)
+        => Application.Current?.TryFindResource(key) as Brush;
+
     private static Brush ResolveBubbleBrush(bool isSystem, bool isOwn, bool isFileReady, bool isIcon)
     {
-        if (isIcon)     return new SolidColorBrush(Color.FromArgb(0, 0, 0, 0)); // trong suốt — chỉ hiện emoji
-        if (isSystem)   return new SolidColorBrush(Color.FromRgb(29, 92, 145));
+        if (isIcon)      return new SolidColorBrush(Color.FromArgb(0, 0, 0, 0)); // transparent — emoji only
+        if (isSystem)    return GetResourceBrush("SystemBubbleBrush")  ?? new SolidColorBrush(Color.FromRgb(29, 92, 145));
         if (isFileReady) return new SolidColorBrush(Color.FromRgb(16, 120, 80));
-        if (isOwn)      return new SolidColorBrush(Color.FromRgb(196, 232, 255));
-        return new SolidColorBrush(Color.FromRgb(240, 248, 255));
+        if (isOwn)       return GetResourceBrush("OwnBubbleBrush")     ?? new SolidColorBrush(Color.FromRgb(196, 232, 255));
+        return             GetResourceBrush("IncomingBubbleBrush")     ?? new SolidColorBrush(Color.FromRgb(240, 248, 255));
     }
 
     private static ImageSource? TryCreateBitmap(string base64Content)

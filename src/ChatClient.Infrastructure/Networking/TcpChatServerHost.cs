@@ -47,7 +47,7 @@ public sealed class TcpChatServerHost : IChatServerHost
     /// </summary>
     public string? FirewallHint { get; private set; }
 
-    public Task StartAsync(ServerStartRequest request, CancellationToken cancellationToken = default)
+    public async Task StartAsync(ServerStartRequest request, CancellationToken cancellationToken = default)
     {
         if (IsRunning)
             throw new InvalidOperationException("Server is already running.");
@@ -57,15 +57,18 @@ public sealed class TcpChatServerHost : IChatServerHost
         _listener.Start();
         Port = request.Port;
 
-        // Tự động mở Windows Firewall cho port này
-        FirewallHint = FirewallHelper.EnsurePortOpen(request.Port);
+        // Tự động mở Windows Firewall — chạy trên thread pool để không block UI
+        // (bước UAC có thể cần người dùng tương tác trong vài giây)
+        FirewallHint = await Task.Run(
+            () => FirewallHelper.EnsurePortOpen(request.Port),
+            cancellationToken);
+
         if (FirewallHint is null)
             _logger?.LogInfo($"Server started on port {request.Port}. Firewall rule OK.");
         else
             _logger?.LogWarning($"Server started on port {request.Port}. {FirewallHint}");
 
         _acceptLoopTask = AcceptLoopAsync(_serverCts.Token);
-        return Task.CompletedTask;
     }
 
     public async Task StopAsync(CancellationToken cancellationToken = default)

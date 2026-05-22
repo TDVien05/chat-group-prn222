@@ -1,5 +1,6 @@
 using System.Collections.Specialized;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using ChatClient.Wpf.ViewModels;
 
@@ -46,6 +47,22 @@ public partial class MainWindow : Window
     {
         if (DataContext is MainWindowViewModel viewModel)
             viewModel.CloseImageViewer();
+    }
+
+    private void CopyAddress_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button btn || btn.DataContext is not string address) return;
+        Clipboard.SetText(address);
+        var original = btn.Content;
+        btn.Content = "✓";
+        var timer = new System.Windows.Threading.DispatcherTimer
+            { Interval = TimeSpan.FromMilliseconds(1200) };
+        timer.Tick += (s, _) =>
+        {
+            btn.Content = original;
+            ((System.Windows.Threading.DispatcherTimer)s!).Stop();
+        };
+        timer.Start();
     }
 
     private void DownloadFile_Click(object sender, RoutedEventArgs e)
