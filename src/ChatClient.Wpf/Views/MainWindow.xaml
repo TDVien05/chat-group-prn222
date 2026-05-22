@@ -6,10 +6,10 @@
         xmlns:viewModels="clr-namespace:ChatClient.Wpf.ViewModels"
         mc:Ignorable="d"
         Title="Chat Group Host"
-        Width="1240"
-        Height="820"
-        MinWidth="1000"
-        MinHeight="700"
+        Width="1280"
+        Height="860"
+        MinWidth="1040"
+        MinHeight="720"
         Background="#EAF6FF">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
@@ -25,6 +25,7 @@
         <SolidColorBrush x:Key="TitleBrush" Color="#123E66" />
         <SolidColorBrush x:Key="BodyBrush" Color="#51718D" />
         <SolidColorBrush x:Key="AddressBrush" Color="#1C5A8F" />
+        <SolidColorBrush x:Key="FileReadyBrush" Color="#107850" />
 
         <Style TargetType="TextBox">
             <Setter Property="Margin" Value="0,6,0,0" />
@@ -44,6 +45,31 @@
             <Setter Property="FontSize" Value="14" />
             <Setter Property="Cursor" Value="Hand" />
         </Style>
+        <Style x:Key="SmallButtonStyle" TargetType="Button">
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="Background" Value="{StaticResource PrimaryBrush}" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Margin" Value="0" />
+        </Style>
+        <Style x:Key="CancelButtonStyle" TargetType="Button">
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="Background" Value="#C0392B" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Margin" Value="0" />
+        </Style>
+        <Style x:Key="ProgressBarStyle" TargetType="ProgressBar">
+            <Setter Property="Height" Value="8" />
+            <Setter Property="Background" Value="#D0E8FF" />
+            <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Margin" Value="0,4,0,0" />
+        </Style>
     </Window.Resources>
     <Grid Margin="20">
         <Grid.ColumnDefinitions>
@@ -52,6 +78,7 @@
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
+        <!-- LEFT SIDEBAR -->
         <Border Grid.Column="0" CornerRadius="24" Background="{StaticResource PanelBrush}" Padding="20">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel>
@@ -61,6 +88,7 @@
                                TextWrapping="Wrap"
                                Foreground="{StaticResource BodyBrush}" />
 
+                    <!-- Host Server Card -->
                     <Border Background="{StaticResource CardBrush}" CornerRadius="18" Padding="16">
                         <StackPanel>
                             <TextBlock Text="Host Server" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TitleBrush}" />
@@ -81,6 +109,7 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- Join Room Card -->
                     <Border Margin="0,18,0,0" Background="{StaticResource CardBrush}" CornerRadius="18" Padding="16">
                         <StackPanel>
                             <TextBlock Text="Join Room" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TitleBrush}" />
@@ -97,6 +126,77 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- Active Transfers Panel -->
+                    <Border Margin="0,18,0,0"
+                            Background="#1A3A5C"
+                            CornerRadius="18"
+                            Padding="16"
+                            Visibility="{Binding HasActiveTransfers, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <StackPanel>
+                            <TextBlock Text="Active Transfers" FontSize="16" FontWeight="SemiBold" Foreground="White" />
+                            <ItemsControl Margin="0,8,0,0" ItemsSource="{Binding ActiveTransfers}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type viewModels:FileTransferItemViewModel}">
+                                        <Border Margin="0,0,0,10" Padding="12,10" Background="#0F2A42" CornerRadius="12">
+                                            <StackPanel>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0"
+                                                               Text="{Binding DirectionIndicator}"
+                                                               FontSize="16"
+                                                               FontWeight="Bold"
+                                                               Foreground="#5BC8FF"
+                                                               VerticalAlignment="Center"
+                                                               Margin="0,0,8,0" />
+                                                    <TextBlock Grid.Column="1"
+                                                               Text="{Binding FileName}"
+                                                               FontSize="13"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="White"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               VerticalAlignment="Center" />
+                                                    <Button Grid.Column="2"
+                                                            Content="✕"
+                                                            Style="{StaticResource CancelButtonStyle}"
+                                                            Command="{Binding CancelCommand}"
+                                                            VerticalAlignment="Center" />
+                                                </Grid>
+                                                <ProgressBar Style="{StaticResource ProgressBarStyle}"
+                                                             Value="{Binding Percentage}"
+                                                             Maximum="100" />
+                                                <Grid Margin="0,4,0,0">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0"
+                                                               Text="{Binding StatusText}"
+                                                               FontSize="11"
+                                                               Foreground="#90C8E8" />
+                                                    <TextBlock Grid.Column="1"
+                                                               FontSize="11"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="#5BC8FF">
+                                                        <TextBlock.Text>
+                                                            <MultiBinding StringFormat="{}{0:F0}%">
+                                                                <Binding Path="Percentage" />
+                                                            </MultiBinding>
+                                                        </TextBlock.Text>
+                                                    </TextBlock>
+                                                </Grid>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Saved History Card -->
                     <Border Margin="0,18,0,0" Background="{StaticResource DeepAccentBrush}" CornerRadius="18" Padding="16">
                         <StackPanel>
                             <TextBlock Text="Saved history" FontSize="18" FontWeight="SemiBold" Foreground="White" />
@@ -107,6 +207,7 @@
             </ScrollViewer>
         </Border>
 
+        <!-- MAIN CHAT PANEL -->
         <Border Grid.Column="2" Background="{StaticResource PanelBrush}" CornerRadius="28" Padding="0">
             <Grid>
                 <Grid.RowDefinitions>
@@ -115,6 +216,7 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
+                <!-- Header -->
                 <Border Background="{StaticResource CardAccentBrush}" CornerRadius="28,28,0,0" Padding="24,20">
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -131,6 +233,7 @@
                     </Grid>
                 </Border>
 
+                <!-- Messages List -->
                 <ListBox x:Name="MessagesList"
                          Grid.Row="1"
                          Margin="18"
@@ -152,15 +255,18 @@
                         <DataTemplate DataType="{x:Type viewModels:ChatMessageItemViewModel}">
                             <Grid>
                                 <Border HorizontalAlignment="{Binding Alignment}"
-                                        MaxWidth="480"
+                                        MaxWidth="500"
                                         Padding="16,12"
                                         Background="{Binding BubbleBrush}"
                                         CornerRadius="20">
                                     <StackPanel>
+                                        <!-- Sender name (shown for others' messages) -->
                                         <TextBlock Text="{Binding User}"
                                                    FontWeight="SemiBold"
                                                    Foreground="#2C6FA4"
                                                    Visibility="{Binding ShowSender, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                                        <!-- IMAGE message -->
                                         <TextBlock Margin="0,4,0,0"
                                                    Text="{Binding FileName}"
                                                    FontSize="12"
@@ -178,6 +284,53 @@
                                                    MaxHeight="240"
                                                    Stretch="Uniform" />
                                         </Border>
+
+                                        <!-- FILE READY message (download card) -->
+                                        <Grid Margin="0,4,0,0"
+                                              Visibility="{Binding IsFile, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                                                <TextBlock Text="&#x1F4C4;"
+                                                           FontFamily="Segoe UI Emoji"
+                                                           FontSize="28" />
+                                                <TextBlock Text="{Binding FileName}"
+                                                           FontSize="14"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="White"
+                                                           TextWrapping="Wrap"
+                                                           Margin="0,4,0,0" />
+                                                <TextBlock Text="{Binding FormattedFileSize}"
+                                                           FontSize="12"
+                                                           Foreground="#A8E8CC"
+                                                           Margin="0,2,0,0" />
+                                            </StackPanel>
+                                            <Button Grid.Column="1"
+                                                    Content="Download"
+                                                    Style="{StaticResource SmallButtonStyle}"
+                                                    Background="#1E8A5A"
+                                                    VerticalAlignment="Center"
+                                                    Tag="{Binding}"
+                                                    Click="DownloadFile_Click" />
+                                        </Grid>
+
+                                        <!-- FILE PROGRESS message -->
+                                        <StackPanel Margin="0,4,0,0"
+                                                    Visibility="{Binding IsFileProgress, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <TextBlock Text="{Binding Body}"
+                                                       FontSize="13"
+                                                       Foreground="{Binding ForegroundBrush}"
+                                                       TextWrapping="Wrap" />
+                                            <ProgressBar Style="{StaticResource ProgressBarStyle}"
+                                                         Foreground="#5BC8FF"
+                                                         Background="#1A3A5C"
+                                                         Value="{Binding FileProgress}"
+                                                         Maximum="100" />
+                                        </StackPanel>
+
+                                        <!-- TEXT / ICON message -->
                                         <TextBlock Margin="0,4,0,0"
                                                    Text="{Binding Body}"
                                                    FontSize="15"
@@ -185,7 +338,11 @@
                                                    Foreground="{Binding ForegroundBrush}"
                                                    TextWrapping="Wrap"
                                                    Visibility="{Binding IsText, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                        <TextBlock Margin="0,8,0,0" Text="{Binding TimeLabel}" FontSize="11" Foreground="{Binding MetaBrush}" />
+
+                                        <TextBlock Margin="0,8,0,0"
+                                                   Text="{Binding TimeLabel}"
+                                                   FontSize="11"
+                                                   Foreground="{Binding MetaBrush}" />
                                     </StackPanel>
                                 </Border>
                             </Grid>
@@ -193,6 +350,7 @@
                     </ListBox.ItemTemplate>
                 </ListBox>
 
+                <!-- Input Bar -->
                 <Border Grid.Row="2" Background="#EEF8FF" CornerRadius="0,0,28,28" Padding="18">
                     <Grid>
                         <Grid.RowDefinitions>
@@ -201,14 +359,17 @@
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
 
+                        <!-- Emoji + action buttons -->
                         <WrapPanel>
                             <Button Width="48" Height="44" Margin="0,0,8,0" FontFamily="Segoe UI Emoji" Content="&#x1F44D;" Command="{Binding SendThumbsUpCommand}" />
                             <Button Width="48" Height="44" Margin="0,0,8,0" FontFamily="Segoe UI Emoji" Content="&#x2764;&#xFE0F;" Command="{Binding SendHeartCommand}" />
                             <Button Width="48" Height="44" Margin="0,0,8,0" FontFamily="Segoe UI Emoji" Content="&#x1F602;" Command="{Binding SendLaughCommand}" />
-                            <Button Width="48" Height="44" FontFamily="Segoe UI Emoji" Content="&#x1F62E;" Command="{Binding SendSurprisedCommand}" />
-                            <Button Margin="12,0,0,0" Content="Choose Image" Command="{Binding ChooseImageCommand}" />
+                            <Button Width="48" Height="44" Margin="0,0,8,0" FontFamily="Segoe UI Emoji" Content="&#x1F62E;" Command="{Binding SendSurprisedCommand}" />
+                            <Button Margin="8,0,0,0" Content="&#x1F5BC; Image" Command="{Binding ChooseImageCommand}" />
+                            <Button Margin="8,0,0,0" Content="&#x1F4CE; Send File" Command="{Binding SendFileCommand}" Background="{StaticResource PrimaryDarkBrush}" />
                         </WrapPanel>
 
+                        <!-- Image preview panel -->
                         <Border Grid.Row="1"
                                 Margin="0,14,0,0"
                                 Padding="14"
@@ -248,6 +409,7 @@
                             </Grid>
                         </Border>
 
+                        <!-- Text input + Send button -->
                         <Grid Grid.Row="2" Margin="0,14,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -265,6 +427,7 @@
                     </Grid>
                 </Border>
 
+                <!-- Image viewer overlay -->
                 <Border Grid.RowSpan="3"
                         Background="#DD08131F"
                         Visibility="{Binding IsImageViewerOpen, Converter={StaticResource BooleanToVisibilityConverter}}">

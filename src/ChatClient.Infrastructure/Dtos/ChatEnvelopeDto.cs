@@ -11,4 +11,10 @@ public sealed class ChatEnvelopeDto
     public string? MediaType { get; set; }
     public DateTimeOffset Timestamp { get; set; } = DateTimeOffset.UtcNow;
     public bool IsHistory { get; set; }
+    // File transfer fields
+    public string? TransferId { get; set; }
+    public int ChunkIndex { get; set; }
+    public int TotalChunks { get; set; }
+    public long FileSize { get; set; }
+    public bool IsLastChunk { get; set; }
 }

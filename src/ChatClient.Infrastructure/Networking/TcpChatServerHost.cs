@@ -6,6 +6,7 @@ using System.Text.Json;
 using ChatClient.Business.Interfaces;
 using ChatClient.Business.Models;
 using ChatClient.Infrastructure.Dtos;
+using ChatClient.Infrastructure.Storage;
 
 namespace ChatClient.Infrastructure.Networking;
 
@@ -13,19 +14,22 @@ public sealed class TcpChatServerHost : IChatServerHost
 {
     private readonly ConcurrentDictionary<string, ChatRoom> _rooms = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<Guid, ClientSession> _sessions = new();
+    private readonly ConcurrentDictionary<string, FileUploadTransfer> _activeTransfers = new();
     private readonly JsonSerializerOptions _jsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
     private readonly IChatHistoryRepository _historyRepository;
+    private readonly IFileTransferStorage _fileStorage;
     private CancellationTokenSource? _serverCts;
     private TcpListener? _listener;
     private Task? _acceptLoopTask;
 
-    public TcpChatServerHost(IChatHistoryRepository historyRepository)
+    public TcpChatServerHost(IChatHistoryRepository historyRepository, IFileTransferStorage fileStorage)
     {
         _historyRepository = historyRepository;
+        _fileStorage = fileStorage;
     }
 
     public bool IsRunning => _listener is not null;
@@ -34,9 +38,7 @@ public sealed class TcpChatServerHost : IChatServerHost
     public Task StartAsync(ServerStartRequest request, CancellationToken cancellationToken = default)
     {
         if (IsRunning)
-        {
             throw new InvalidOperationException("Server is already running.");
-        }
 
         _serverCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _listener = new TcpListener(IPAddress.Any, request.Port);
@@ -48,30 +50,24 @@ public sealed class TcpChatServerHost : IChatServerHost
 
     public async Task StopAsync(CancellationToken cancellationToken = default)
     {
-        if (_listener is null || _serverCts is null)
-        {
-            return;
-        }
+        if (_listener is null || _serverCts is null) return;
 
         _serverCts.Cancel();
         _listener.Stop();
 
         if (_acceptLoopTask is not null)
         {
-            try
-            {
-                await _acceptLoopTask.WaitAsync(cancellationToken);
-            }
-            catch (OperationCanceledException)
-            {
-            }
+            try { await _acceptLoopTask.WaitAsync(cancellationToken); }
+            catch (OperationCanceledException) { }
         }
+
+        // Clean up active transfers
+        foreach (var t in _activeTransfers.Values)
+            await t.DisposeAsync();
+        _activeTransfers.Clear();
 
         foreach (var session in _sessions.Values)
-        {
             await session.DisposeAsync();
-        }
-
         _sessions.Clear();
         _rooms.Clear();
 
@@ -81,18 +77,11 @@ public sealed class TcpChatServerHost : IChatServerHost
         _serverCts = null;
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        await StopAsync();
-    }
+    public async ValueTask DisposeAsync() => await StopAsync();
 
     private async Task AcceptLoopAsync(CancellationToken cancellationToken)
     {
-        if (_listener is null)
-        {
-            return;
-        }
-
+        if (_listener is null) return;
         try
         {
             while (!cancellationToken.IsCancellationRequested)
@@ -103,12 +92,8 @@ public sealed class TcpChatServerHost : IChatServerHost
                 _ = HandleClientAsync(session, cancellationToken);
             }
         }
-        catch (OperationCanceledException)
-        {
-        }
-        catch (ObjectDisposedException)
-        {
-        }
+        catch (OperationCanceledException) { }
+        catch (ObjectDisposedException) { }
     }
 
     private async Task HandleClientAsync(ClientSession session, CancellationToken cancellationToken)
@@ -125,40 +110,20 @@ public sealed class TcpChatServerHost : IChatServerHost
             while (!cancellationToken.IsCancellationRequested)
             {
                 var line = await session.Reader.ReadLineAsync(cancellationToken);
-                if (line is null)
-                {
-                    break;
-                }
-
-                if (string.IsNullOrWhiteSpace(line))
-                {
-                    continue;
-                }
+                if (line is null) break;
+                if (string.IsNullOrWhiteSpace(line)) continue;
 
                 ChatEnvelopeDto? incoming;
-                try
-                {
-                    incoming = JsonSerializer.Deserialize<ChatEnvelopeDto>(line, _jsonOptions);
-                }
+                try { incoming = JsonSerializer.Deserialize<ChatEnvelopeDto>(line, _jsonOptions); }
                 catch (JsonException)
                 {
-                    await session.SendAsync(new ChatEnvelopeDto
-                    {
-                        Type = "error",
-                        Content = "Invalid JSON payload.",
-                        Timestamp = DateTimeOffset.UtcNow
-                    }, cancellationToken);
+                    await session.SendAsync(new ChatEnvelopeDto { Type = "error", Content = "Invalid JSON payload.", Timestamp = DateTimeOffset.UtcNow }, cancellationToken);
                     continue;
                 }
 
                 if (incoming is null || string.IsNullOrWhiteSpace(incoming.Type))
                 {
-                    await session.SendAsync(new ChatEnvelopeDto
-                    {
-                        Type = "error",
-                        Content = "Message type is required.",
-                        Timestamp = DateTimeOffset.UtcNow
-                    }, cancellationToken);
+                    await session.SendAsync(new ChatEnvelopeDto { Type = "error", Content = "Message type is required.", Timestamp = DateTimeOffset.UtcNow }, cancellationToken);
                     continue;
                 }
 
@@ -175,24 +140,42 @@ public sealed class TcpChatServerHost : IChatServerHost
                     case "leave":
                         await RemoveFromRoomAsync(session, notifyRoom: true, cancellationToken);
                         break;
+                    case "file-start":
+                        await HandleFileStartAsync(session, incoming, cancellationToken);
+                        break;
+                    case "file-chunk":
+                        await HandleFileChunkAsync(session, incoming, cancellationToken);
+                        break;
+                    case "file-cancel":
+                        await HandleFileCancelAsync(session, incoming, cancellationToken);
+                        break;
+                    case "file-request":
+                        _ = HandleFileRequestAsync(session, incoming, cancellationToken);
+                        break;
                     default:
                         await session.SendAsync(new ChatEnvelopeDto
                         {
                             Type = "error",
                             Content = $"Unsupported message type '{incoming.Type}'.",
-                            Room = session.RoomName,
-                            User = session.UserName,
                             Timestamp = DateTimeOffset.UtcNow
                         }, cancellationToken);
                         break;
                 }
             }
         }
-        catch (OperationCanceledException)
-        {
-        }
+        catch (OperationCanceledException) { }
         finally
         {
+            // Clean up any transfers from this session
+            var sessionTransfers = _activeTransfers
+                .Where(kv => kv.Value.SessionId == session.Id)
+                .Select(kv => kv.Key)
+                .ToList();
+            foreach (var tid in sessionTransfers)
+            {
+                if (_activeTransfers.TryRemove(tid, out var t))
+                    await t.DisposeAsync();
+            }
             await RemoveFromRoomAsync(session, notifyRoom: true, CancellationToken.None);
             _sessions.TryRemove(session.Id, out _);
             await session.DisposeAsync();
@@ -203,12 +186,7 @@ public sealed class TcpChatServerHost : IChatServerHost
     {
         if (string.IsNullOrWhiteSpace(joinRequest.Room) || string.IsNullOrWhiteSpace(joinRequest.User))
         {
-            await session.SendAsync(new ChatEnvelopeDto
-            {
-                Type = "error",
-                Content = "Join requires both room and user.",
-                Timestamp = DateTimeOffset.UtcNow
-            }, cancellationToken);
+            await session.SendAsync(new ChatEnvelopeDto { Type = "error", Content = "Join requires both room and user.", Timestamp = DateTimeOffset.UtcNow }, cancellationToken);
             return;
         }
 
@@ -256,38 +234,19 @@ public sealed class TcpChatServerHost : IChatServerHost
     {
         if (string.IsNullOrWhiteSpace(session.RoomName) || string.IsNullOrWhiteSpace(session.UserName))
         {
-            await session.SendAsync(new ChatEnvelopeDto
-            {
-                Type = "error",
-                Content = "Join a room before sending messages.",
-                Timestamp = DateTimeOffset.UtcNow
-            }, cancellationToken);
+            await session.SendAsync(new ChatEnvelopeDto { Type = "error", Content = "Join a room before sending messages.", Timestamp = DateTimeOffset.UtcNow }, cancellationToken);
             return;
         }
 
         if (string.IsNullOrWhiteSpace(incoming.Content))
         {
-            await session.SendAsync(new ChatEnvelopeDto
-            {
-                Type = "error",
-                Content = "Message content cannot be empty.",
-                Room = session.RoomName,
-                User = session.UserName,
-                Timestamp = DateTimeOffset.UtcNow
-            }, cancellationToken);
+            await session.SendAsync(new ChatEnvelopeDto { Type = "error", Content = "Message content cannot be empty.", Timestamp = DateTimeOffset.UtcNow }, cancellationToken);
             return;
         }
 
         if (!_rooms.TryGetValue(session.RoomName, out var room))
         {
-            await session.SendAsync(new ChatEnvelopeDto
-            {
-                Type = "error",
-                Content = "The room is no longer available.",
-                Room = session.RoomName,
-                User = session.UserName,
-                Timestamp = DateTimeOffset.UtcNow
-            }, cancellationToken);
+            await session.SendAsync(new ChatEnvelopeDto { Type = "error", Content = "The room is no longer available.", Timestamp = DateTimeOffset.UtcNow }, cancellationToken);
             return;
         }
 
@@ -307,12 +266,226 @@ public sealed class TcpChatServerHost : IChatServerHost
         await _historyRepository.AppendAsync(session.RoomName, message, cancellationToken);
     }
 
-    private async Task RemoveFromRoomAsync(ClientSession session, bool notifyRoom, CancellationToken cancellationToken)
+    private async Task HandleFileStartAsync(ClientSession session, ChatEnvelopeDto dto, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(session.RoomName))
+        if (string.IsNullOrWhiteSpace(session.RoomName) || string.IsNullOrWhiteSpace(session.UserName))
         {
+            await session.SendAsync(new ChatEnvelopeDto { Type = "error", Content = "Join a room before uploading files.", Timestamp = DateTimeOffset.UtcNow }, cancellationToken);
             return;
         }
+
+        if (dto.TransferId is null || dto.FileName is null)
+        {
+            await session.SendAsync(new ChatEnvelopeDto { Type = "error", Content = "file-start requires transferId and fileName.", Timestamp = DateTimeOffset.UtcNow }, cancellationToken);
+            return;
+        }
+
+        var tempPath = Path.GetTempFileName();
+        var transfer = new FileUploadTransfer
+        {
+            TransferId = dto.TransferId,
+            FileName = dto.FileName,
+            MediaType = dto.MediaType ?? "application/octet-stream",
+            FileSize = dto.FileSize,
+            TotalChunks = dto.TotalChunks,
+            TempPath = tempPath,
+            SessionId = session.Id,
+            RoomName = session.RoomName,
+            UserName = session.UserName,
+            Stream = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None, 65536, useAsync: true)
+        };
+
+        _activeTransfers[dto.TransferId] = transfer;
+
+        // Broadcast upload announcement to room
+        if (_rooms.TryGetValue(session.RoomName, out var room))
+        {
+            await BroadcastToRoomAsync(room, new ChatEnvelopeDto
+            {
+                Type = "file-progress",
+                TransferId = dto.TransferId,
+                FileName = dto.FileName,
+                User = session.UserName,
+                Room = session.RoomName,
+                FileSize = dto.FileSize,
+                TotalChunks = dto.TotalChunks,
+                ChunkIndex = 0,
+                Content = "0",
+                Timestamp = DateTimeOffset.UtcNow
+            }, cancellationToken);
+        }
+    }
+
+    private async Task HandleFileChunkAsync(ClientSession session, ChatEnvelopeDto dto, CancellationToken cancellationToken)
+    {
+        if (dto.TransferId is null || dto.Content is null) return;
+        if (!_activeTransfers.TryGetValue(dto.TransferId, out var transfer)) return;
+
+        byte[] data;
+        try { data = Convert.FromBase64String(dto.Content); }
+        catch { return; }
+
+        await transfer.Stream!.WriteAsync(data, cancellationToken);
+        transfer.ChunksReceived++;
+        transfer.BytesReceived += data.Length;
+
+        // Broadcast progress every 5% or on last chunk
+        var progressPct = transfer.TotalChunks > 0
+            ? (int)((double)transfer.ChunksReceived / transfer.TotalChunks * 100)
+            : 0;
+
+        if (dto.IsLastChunk || progressPct >= transfer.LastBroadcastPct + 5)
+        {
+            transfer.LastBroadcastPct = progressPct;
+            if (_rooms.TryGetValue(transfer.RoomName, out var progressRoom))
+            {
+                await BroadcastToRoomAsync(progressRoom, new ChatEnvelopeDto
+                {
+                    Type = "file-progress",
+                    TransferId = dto.TransferId,
+                    FileName = transfer.FileName,
+                    User = transfer.UserName,
+                    Room = transfer.RoomName,
+                    FileSize = transfer.FileSize,
+                    TotalChunks = transfer.TotalChunks,
+                    ChunkIndex = transfer.ChunksReceived,
+                    Content = progressPct.ToString(),
+                    Timestamp = DateTimeOffset.UtcNow
+                }, cancellationToken);
+            }
+        }
+
+        if (dto.IsLastChunk)
+        {
+            await transfer.Stream.FlushAsync(cancellationToken);
+            await transfer.Stream.DisposeAsync();
+            transfer.Stream = null;
+
+            // Store file permanently
+            await _fileStorage.StoreFileAsync(transfer.TempPath, transfer.TransferId, transfer.FileName, transfer.RoomName, cancellationToken);
+
+            // Broadcast file-ready to room
+            if (_rooms.TryGetValue(transfer.RoomName, out var room))
+            {
+                var readyDto = new ChatEnvelopeDto
+                {
+                    Type = "file-ready",
+                    TransferId = transfer.TransferId,
+                    FileName = transfer.FileName,
+                    MediaType = transfer.MediaType,
+                    User = transfer.UserName,
+                    Room = transfer.RoomName,
+                    FileSize = transfer.FileSize,
+                    Content = transfer.TransferId, // Content = transferId (used as download key)
+                    Timestamp = DateTimeOffset.UtcNow
+                };
+                await BroadcastToRoomAsync(room, readyDto, cancellationToken);
+
+                // Save to history
+                var historyMsg = new ChatMessage
+                {
+                    Type = "file-ready",
+                    Room = transfer.RoomName,
+                    User = transfer.UserName,
+                    Content = transfer.TransferId,
+                    FileName = transfer.FileName,
+                    MediaType = transfer.MediaType,
+                    FileSize = transfer.FileSize,
+                    TransferId = transfer.TransferId,
+                    Timestamp = DateTimeOffset.UtcNow
+                };
+                await _historyRepository.AppendAsync(transfer.RoomName, historyMsg, cancellationToken);
+            }
+
+            _activeTransfers.TryRemove(dto.TransferId, out _);
+        }
+    }
+
+    private async Task HandleFileCancelAsync(ClientSession session, ChatEnvelopeDto dto, CancellationToken cancellationToken)
+    {
+        if (dto.TransferId is null) return;
+        if (_activeTransfers.TryRemove(dto.TransferId, out var transfer))
+        {
+            await transfer.DisposeAsync();
+            // Notify room
+            if (!string.IsNullOrWhiteSpace(transfer.RoomName) && _rooms.TryGetValue(transfer.RoomName, out var room))
+            {
+                await BroadcastToRoomAsync(room, new ChatEnvelopeDto
+                {
+                    Type = "file-cancel",
+                    TransferId = dto.TransferId,
+                    FileName = transfer.FileName,
+                    User = transfer.UserName,
+                    Room = transfer.RoomName,
+                    Timestamp = DateTimeOffset.UtcNow
+                }, cancellationToken);
+            }
+        }
+    }
+
+    private async Task HandleFileRequestAsync(ClientSession session, ChatEnvelopeDto dto, CancellationToken cancellationToken)
+    {
+        if (dto.TransferId is null) return;
+
+        if (!_fileStorage.FileExists(dto.TransferId))
+        {
+            await session.SendAsync(new ChatEnvelopeDto
+            {
+                Type = "error",
+                Content = $"File not found: {dto.TransferId}",
+                Timestamp = DateTimeOffset.UtcNow
+            }, cancellationToken);
+            return;
+        }
+
+        try
+        {
+            var (stream, fileSize, fileName) = await _fileStorage.OpenFileAsync(dto.TransferId, cancellationToken);
+            await using var fileStream = stream;
+            const int ChunkSize = 512 * 1024;
+            var buffer = new byte[ChunkSize];
+            var totalChunks = (int)Math.Ceiling((double)fileSize / ChunkSize);
+            int chunkIndex = 0;
+            long bytesSent = 0;
+
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                var bytesRead = await fileStream.ReadAsync(buffer, cancellationToken);
+                if (bytesRead == 0) break;
+                bytesSent += bytesRead;
+                var isLast = bytesSent >= fileSize;
+
+                await session.SendAsync(new ChatEnvelopeDto
+                {
+                    Type = "file-chunk",
+                    TransferId = dto.TransferId,
+                    FileName = fileName,
+                    FileSize = fileSize,
+                    ChunkIndex = chunkIndex,
+                    TotalChunks = totalChunks,
+                    Content = Convert.ToBase64String(buffer, 0, bytesRead),
+                    IsLastChunk = isLast,
+                    Timestamp = DateTimeOffset.UtcNow
+                }, cancellationToken);
+
+                chunkIndex++;
+                if (isLast) break;
+            }
+        }
+        catch (FileNotFoundException)
+        {
+            await session.SendAsync(new ChatEnvelopeDto
+            {
+                Type = "error",
+                Content = "File not found on server.",
+                Timestamp = DateTimeOffset.UtcNow
+            }, cancellationToken);
+        }
+    }
+
+    private async Task RemoveFromRoomAsync(ClientSession session, bool notifyRoom, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(session.RoomName)) return;
 
         var roomName = session.RoomName;
         var userName = session.UserName;
@@ -323,7 +496,7 @@ public sealed class TcpChatServerHost : IChatServerHost
 
             if (notifyRoom && !string.IsNullOrWhiteSpace(userName))
             {
-                var systemMessage = new ChatMessage
+                var msg = new ChatMessage
                 {
                     Type = "system",
                     Room = roomName,
@@ -331,15 +504,12 @@ public sealed class TcpChatServerHost : IChatServerHost
                     Content = $"{userName} left the room.",
                     Timestamp = DateTimeOffset.UtcNow
                 };
-
-                await BroadcastToRoomAsync(room, MapToDto(systemMessage), cancellationToken);
-                await _historyRepository.AppendAsync(roomName, systemMessage, cancellationToken);
+                await BroadcastToRoomAsync(room, MapToDto(msg), cancellationToken);
+                await _historyRepository.AppendAsync(roomName, msg, cancellationToken);
             }
 
             if (room.Members.IsEmpty)
-            {
                 _rooms.TryRemove(room.Name, out _);
-            }
         }
 
         session.RoomName = null;
@@ -352,34 +522,56 @@ public sealed class TcpChatServerHost : IChatServerHost
         return Task.WhenAll(tasks);
     }
 
-    private static ChatEnvelopeDto MapToDto(ChatMessage message)
+    private static ChatEnvelopeDto MapToDto(ChatMessage message) => new()
     {
-        return new ChatEnvelopeDto
-        {
-            Type = message.Type,
-            Room = message.Room,
-            User = message.User,
-            Content = message.Content,
-            Icon = message.Icon,
-            FileName = message.FileName,
-            MediaType = message.MediaType,
-            Timestamp = message.Timestamp,
-            IsHistory = message.IsHistory
-        };
-    }
+        Type = message.Type,
+        Room = message.Room,
+        User = message.User,
+        Content = message.Content,
+        Icon = message.Icon,
+        FileName = message.FileName,
+        MediaType = message.MediaType,
+        Timestamp = message.Timestamp,
+        IsHistory = message.IsHistory,
+        FileSize = message.FileSize,
+        TransferId = message.TransferId
+    };
 
     private sealed class ChatRoom
     {
-        public ChatRoom(string name)
-        {
-            Name = name;
-        }
-
+        public ChatRoom(string name) { Name = name; }
         public string Name { get; }
         public ConcurrentDictionary<Guid, ClientSession> Members { get; } = new();
     }
 
-    private sealed class ClientSession
+    private sealed class FileUploadTransfer : IAsyncDisposable
+    {
+        public string TransferId { get; init; } = string.Empty;
+        public string FileName { get; init; } = string.Empty;
+        public string MediaType { get; init; } = string.Empty;
+        public long FileSize { get; init; }
+        public int TotalChunks { get; init; }
+        public string TempPath { get; init; } = string.Empty;
+        public Guid SessionId { get; init; }
+        public string RoomName { get; init; } = string.Empty;
+        public string UserName { get; init; } = string.Empty;
+        public FileStream? Stream { get; set; }
+        public int ChunksReceived { get; set; }
+        public long BytesReceived { get; set; }
+        public int LastBroadcastPct { get; set; }
+
+        public async ValueTask DisposeAsync()
+        {
+            if (Stream is not null)
+            {
+                await Stream.DisposeAsync();
+                Stream = null;
+            }
+            try { if (File.Exists(TempPath)) File.Delete(TempPath); } catch { }
+        }
+    }
+
+    private sealed class ClientSession : IAsyncDisposable
     {
         private readonly JsonSerializerOptions _jsonOptions;
         private readonly SemaphoreSlim _writeLock = new(1, 1);
@@ -390,9 +582,8 @@ public sealed class TcpChatServerHost : IChatServerHost
             Id = Guid.NewGuid();
             _tcpClient = tcpClient;
             _jsonOptions = jsonOptions;
-
             var stream = tcpClient.GetStream();
-            Reader = new StreamReader(stream, Encoding.UTF8);
+            Reader = new StreamReader(stream, Encoding.UTF8, bufferSize: 1024 * 1024);
             Writer = new StreamWriter(stream, new UTF8Encoding(false)) { AutoFlush = true };
         }
 
@@ -406,14 +597,8 @@ public sealed class TcpChatServerHost : IChatServerHost
         {
             var payload = JsonSerializer.Serialize(envelope, _jsonOptions);
             await _writeLock.WaitAsync(cancellationToken);
-            try
-            {
-                await Writer.WriteLineAsync(payload);
-            }
-            finally
-            {
-                _writeLock.Release();
-            }
+            try { await Writer.WriteLineAsync(payload.AsMemory(), cancellationToken); }
+            finally { _writeLock.Release(); }
         }
 
         public async ValueTask DisposeAsync()

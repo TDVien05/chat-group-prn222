@@ -32,9 +32,7 @@ public partial class MainWindow : Window
     private void MessageImage_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
         if (DataContext is not MainWindowViewModel viewModel)
-        {
             return;
-        }
 
         if (sender is FrameworkElement element &&
             element.DataContext is ChatMessageItemViewModel message &&
@@ -47,8 +45,20 @@ public partial class MainWindow : Window
     private void CloseImageViewer_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is MainWindowViewModel viewModel)
-        {
             viewModel.CloseImageViewer();
+    }
+
+    private void DownloadFile_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel viewModel)
+            return;
+
+        if (sender is FrameworkElement element &&
+            element.Tag is ChatMessageItemViewModel message &&
+            message.TransferId is not null &&
+            message.FileName is not null)
+        {
+            viewModel.DownloadFile(message.TransferId, message.FileName);
         }
     }
 }

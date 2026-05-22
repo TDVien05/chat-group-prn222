@@ -21,10 +21,14 @@ public sealed class ChatApplicationService : IAsyncDisposable
 
         _chatClient.MessageReceived += (_, message) => MessageReceived?.Invoke(this, message);
         _chatClient.ConnectionClosed += (_, reason) => ConnectionClosed?.Invoke(this, reason);
+        _chatClient.FileUploadProgressChanged += (_, progress) => FileUploadProgressChanged?.Invoke(this, progress);
+        _chatClient.FileDownloadProgressChanged += (_, progress) => FileDownloadProgressChanged?.Invoke(this, progress);
     }
 
     public event EventHandler<ChatMessage>? MessageReceived;
     public event EventHandler<string>? ConnectionClosed;
+    public event EventHandler<FileUploadProgress>? FileUploadProgressChanged;
+    public event EventHandler<FileDownloadProgress>? FileDownloadProgressChanged;
 
     public bool IsConnected => _chatClient.IsConnected;
     public bool IsServerRunning => _chatServerHost.IsRunning;
@@ -41,60 +45,53 @@ public sealed class ChatApplicationService : IAsyncDisposable
     {
         var validationError = ServerStartValidator.Validate(request);
         if (validationError is not null)
-        {
             throw new InvalidOperationException(validationError);
-        }
-
         await _chatServerHost.StartAsync(request, cancellationToken);
     }
 
     public Task StopServerAsync(CancellationToken cancellationToken = default)
-    {
-        return _chatServerHost.StopAsync(cancellationToken);
-    }
+        => _chatServerHost.StopAsync(cancellationToken);
 
     public async Task ConnectAsync(ClientConnectionRequest request, CancellationToken cancellationToken = default)
     {
         var validationError = ClientConnectionValidator.Validate(request);
         if (validationError is not null)
-        {
             throw new InvalidOperationException(validationError);
-        }
-
         await _chatClient.ConnectAsync(request, cancellationToken);
     }
 
     public Task DisconnectAsync(CancellationToken cancellationToken = default)
-    {
-        return _chatClient.DisconnectAsync(cancellationToken);
-    }
+        => _chatClient.DisconnectAsync(cancellationToken);
 
     public Task SendTextMessageAsync(string content, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(content))
-        {
             return Task.CompletedTask;
-        }
-
         return _chatClient.SendTextMessageAsync(content.Trim(), cancellationToken);
     }
 
     public Task SendIconMessageAsync(string glyph, string iconName, CancellationToken cancellationToken = default)
-    {
-        return _chatClient.SendIconMessageAsync(glyph, iconName, cancellationToken);
-    }
+        => _chatClient.SendIconMessageAsync(glyph, iconName, cancellationToken);
 
     public Task SendImageMessageAsync(string fileName, string mediaType, string base64Content, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(fileName) ||
-            string.IsNullOrWhiteSpace(mediaType) ||
-            string.IsNullOrWhiteSpace(base64Content))
-        {
+        if (string.IsNullOrWhiteSpace(fileName) || string.IsNullOrWhiteSpace(mediaType) || string.IsNullOrWhiteSpace(base64Content))
             return Task.CompletedTask;
-        }
-
         return _chatClient.SendImageMessageAsync(fileName, mediaType, base64Content, cancellationToken);
     }
+
+    public Task SendFileAsync(string filePath, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(filePath))
+            return Task.CompletedTask;
+        return _chatClient.SendFileAsync(filePath, cancellationToken);
+    }
+
+    public Task RequestFileDownloadAsync(string transferId, string savePath, CancellationToken cancellationToken = default)
+        => _chatClient.RequestFileDownloadAsync(transferId, savePath, cancellationToken);
+
+    public void CancelFileTransfer(string transferId)
+        => _chatClient.CancelFileTransfer(transferId);
 
     public async ValueTask DisposeAsync()
     {

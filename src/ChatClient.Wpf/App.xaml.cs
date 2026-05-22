@@ -1,8 +1,10 @@
+using System.IO;
 using System.Windows;
 using ChatClient.Business.Services;
 using ChatClient.Infrastructure.Config;
 using ChatClient.Infrastructure.Networking;
 using ChatClient.Infrastructure.Repositories;
+using ChatClient.Infrastructure.Storage;
 using ChatClient.Wpf.ViewModels;
 using ChatClient.Wpf.Views;
 
@@ -18,19 +20,21 @@ public partial class App : Application
 
         var historyOptions = new HistoryStorageOptions();
         var historyRepository = new FileChatHistoryRepository(historyOptions);
+
+        var filesRoot = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "ChatGroupServer", "Files");
+        var fileStorage = new FileTransferStorage(filesRoot);
+
         var applicationService = new ChatApplicationService(
             new TcpChatClient(),
-            new TcpChatServerHost(historyRepository),
+            new TcpChatServerHost(historyRepository, fileStorage),
             new LocalAddressProvider());
 
         _applicationService = applicationService;
 
         var viewModel = new MainWindowViewModel(applicationService, historyRepository);
-        var mainWindow = new MainWindow
-        {
-            DataContext = viewModel
-        };
-
+        var mainWindow = new MainWindow { DataContext = viewModel };
         MainWindow = mainWindow;
         mainWindow.Show();
     }
@@ -38,10 +42,7 @@ public partial class App : Application
     protected override async void OnExit(ExitEventArgs e)
     {
         if (_applicationService is not null)
-        {
             await _applicationService.DisposeAsync();
-        }
-
         base.OnExit(e);
     }
 }

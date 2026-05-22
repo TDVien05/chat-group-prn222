@@ -18,3 +18,4 @@ C:\Users\kietta\Documents\working\Chat-Group-Server\src\ChatServer.Console\obj\D
 C:\Users\kietta\Documents\working\Chat-Group-Server\src\ChatServer.Console\obj\Debug\net10.0\ChatServer.Console.pdb
 C:\Users\kietta\Documents\working\Chat-Group-Server\src\ChatServer.Console\obj\Debug\net10.0\ChatServer.Console.genruntimeconfig.cache
 C:\Users\kietta\Documents\working\Chat-Group-Server\src\ChatServer.Console\obj\Debug\net10.0\ref\ChatServer.Console.dll
+C:\Users\kietta\Documents\working\Chat-Group-Server\src\ChatServer.Console\obj\Debug\net10.0\ChatServer.Console.sourcelink.json
