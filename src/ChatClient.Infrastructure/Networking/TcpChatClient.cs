@@ -11,7 +11,7 @@ namespace ChatClient.Infrastructure.Networking;
 
 public sealed class TcpChatClient : IChatClient
 {
-    private const int FileChunkSize = 512 * 1024; // 512 KB per chunk
+    private const int FileChunkSize = 2 * 1024 * 1024; // 2 MB per chunk — tốt hơn cho video lớn
 
     private readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -57,7 +57,7 @@ public sealed class TcpChatClient : IChatClient
         await _tcpClient.ConnectAsync(request.Host, request.Port, cancellationToken);
 
         var stream = _tcpClient.GetStream();
-        _reader = new StreamReader(stream, Encoding.UTF8, bufferSize: 1024 * 1024);
+        _reader = new StreamReader(stream, Encoding.UTF8, bufferSize: 4 * 1024 * 1024); // 4 MB — chứa được Base64 của 2 MB chunk
         _writer = new StreamWriter(stream, new UTF8Encoding(false)) { AutoFlush = true };
         _connectionCts = new CancellationTokenSource();
 
@@ -444,17 +444,33 @@ public sealed class TcpChatClient : IChatClient
     private static string? ResolveMediaType(string extension) =>
         extension.ToLowerInvariant() switch
         {
-            ".png" => "image/png",
+            // Ảnh
+            ".png"  => "image/png",
             ".jpg" or ".jpeg" => "image/jpeg",
-            ".gif" => "image/gif",
-            ".bmp" => "image/bmp",
+            ".gif"  => "image/gif",
+            ".bmp"  => "image/bmp",
             ".webp" => "image/webp",
-            ".pdf" => "application/pdf",
-            ".mp4" => "video/mp4",
-            ".mp3" => "audio/mpeg",
-            ".zip" => "application/zip",
-            ".rar" => "application/x-rar-compressed",
-            ".7z" => "application/x-7z-compressed",
+            // Tài liệu
+            ".pdf"  => "application/pdf",
+            // Video (thêm đầy đủ cho assignment)
+            ".mp4"  => "video/mp4",
+            ".mkv"  => "video/x-matroska",
+            ".avi"  => "video/x-msvideo",
+            ".mov"  => "video/quicktime",
+            ".wmv"  => "video/x-ms-wmv",
+            ".webm" => "video/webm",
+            ".flv"  => "video/x-flv",
+            ".m4v"  => "video/x-m4v",
+            ".ts"   => "video/mp2t",
+            // Audio
+            ".mp3"  => "audio/mpeg",
+            ".aac"  => "audio/aac",
+            ".wav"  => "audio/wav",
+            ".flac" => "audio/flac",
+            // Nén
+            ".zip"  => "application/zip",
+            ".rar"  => "application/x-rar-compressed",
+            ".7z"   => "application/x-7z-compressed",
             _ => null
         };
 

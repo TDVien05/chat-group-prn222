@@ -486,7 +486,7 @@ public sealed class TcpChatServerHost : IChatServerHost
             var (stream, fileSize, fileName) = await _fileStorage.OpenFileAsync(dto.TransferId, cancellationToken);
             _logger?.LogInfo($"[FILE_SEND] User='{session.UserName ?? "?"}' IP={session.RemoteEndPoint} File='{fileName}' Size={fileSize:N0}B TransferId={dto.TransferId}");
             await using var fileStream = stream;
-            const int ChunkSize = 512 * 1024;
+            const int ChunkSize = 2 * 1024 * 1024; // 2 MB — khớp với client upload
             var buffer = new byte[ChunkSize];
             var totalChunks = (int)Math.Ceiling((double)fileSize / ChunkSize);
             int chunkIndex = 0;
@@ -637,7 +637,7 @@ public sealed class TcpChatServerHost : IChatServerHost
             _jsonOptions = jsonOptions;
             RemoteEndPoint = tcpClient.Client.RemoteEndPoint?.ToString() ?? "unknown";
             var stream = tcpClient.GetStream();
-            Reader = new StreamReader(stream, Encoding.UTF8, bufferSize: 1024 * 1024);
+            Reader = new StreamReader(stream, Encoding.UTF8, bufferSize: 4 * 1024 * 1024); // 4 MB — đủ chứa Base64 của 2 MB chunk
             Writer = new StreamWriter(stream, new UTF8Encoding(false)) { AutoFlush = true };
         }
 

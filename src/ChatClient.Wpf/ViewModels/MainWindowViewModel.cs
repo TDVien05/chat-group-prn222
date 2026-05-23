@@ -573,8 +573,10 @@ public sealed class MainWindowViewModel : ViewModelBase
             }
             else
             {
-                existing.StatusText = $"{existing.FormattedBytesSent} / {existing.FormattedTotalSize}";
-                StatusText = $"Uploading {progress.FileName}: {progress.Percentage:F0}%";
+                var speed = string.IsNullOrEmpty(existing.SpeedText) ? string.Empty : $"  ·  {existing.SpeedText}";
+                var eta   = string.IsNullOrEmpty(existing.EtaText)   ? string.Empty : $"  ·  {existing.EtaText}";
+                existing.StatusText = $"{existing.FormattedBytesSent} / {existing.FormattedTotalSize}{speed}{eta}";
+                StatusText = $"Đang gửi {progress.FileName}: {progress.Percentage:F0}%{speed}";
             }
         });
     }

@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ChatClient.Wpf")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+52dd8ef54cb896df9dd7643183fb036965bcb2a4")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8177f718ddebc57cfcb347299f34fe72f028de14")]
 [assembly: System.Reflection.AssemblyProductAttribute("ChatClient.Wpf")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ChatClient.Wpf")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
