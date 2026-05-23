@@ -35,6 +35,9 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string _serverPort = "5000";
     private string _statusText = "Start the server or connect to an existing host.";
     private string _userName = Environment.UserName;
+    private bool _isServerRunning;
+    private bool _isTunnelRunning;
+    private string _ngrokAddress = string.Empty;
 
     public MainWindowViewModel(ChatApplicationService applicationService, IChatHistoryRepository historyRepository)
     {
@@ -52,6 +55,8 @@ public sealed class MainWindowViewModel : ViewModelBase
         ClearSelectedImageCommand = new AsyncRelayCommand(ClearSelectedImageAsync, () => HasPendingImage);
         SendImageCommand = new AsyncRelayCommand(SendImageAsync, () => HasPendingImage);
         SendFileCommand = new AsyncRelayCommand(SendFileAsync);
+        StartTunnelCommand = new AsyncRelayCommand(StartTunnelAsync);
+        StopTunnelCommand = new AsyncRelayCommand(StopTunnelAsync);
 
         // Xây danh sách emoji — mỗi item mang sẵn command đã capture glyph + name
         Emojis = EmojiDefs
@@ -129,6 +134,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     public AsyncRelayCommand ClearSelectedImageCommand { get; }
     public AsyncRelayCommand SendImageCommand { get; }
     public AsyncRelayCommand SendFileCommand { get; }
+    public AsyncRelayCommand StartTunnelCommand { get; }
+    public AsyncRelayCommand StopTunnelCommand { get; }
 
     public string HostPort
     {
@@ -158,6 +165,34 @@ public sealed class MainWindowViewModel : ViewModelBase
     {
         get => _userName;
         set => SetProperty(ref _userName, value);
+    }
+
+    /// <summary>Server đang chạy hay không (dùng để hiện/ẩn phần tunnel trong UI).</summary>
+    public bool IsServerRunning
+    {
+        get => _isServerRunning;
+        private set => SetProperty(ref _isServerRunning, value);
+    }
+
+    /// <summary>Tunnel ngrok đang chạy hay không.</summary>
+    public bool IsTunnelRunning
+    {
+        get => _isTunnelRunning;
+        private set
+        {
+            if (SetProperty(ref _isTunnelRunning, value))
+                OnPropertyChanged(nameof(IsTunnelNotRunning));
+        }
+    }
+
+    /// <summary>Nghịch đảo của IsTunnelRunning, dùng để hiện nút "Tạo Tunnel".</summary>
+    public bool IsTunnelNotRunning => !_isTunnelRunning;
+
+    /// <summary>Địa chỉ public của ngrok tunnel, ví dụ "0.tcp.ngrok.io:12345".</summary>
+    public string NgrokAddress
+    {
+        get => _ngrokAddress;
+        private set => SetProperty(ref _ngrokAddress, value);
     }
 
     public string OutgoingMessage
@@ -241,6 +276,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         try
         {
             await _applicationService.StartServerAsync(new ServerStartRequest { Port = port });
+            IsServerRunning = true;
             HostAddresses.Clear();
             foreach (var address in _applicationService.GetShareableAddresses())
                 HostAddresses.Add(address);
@@ -248,7 +284,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             // Nếu firewall chưa được mở tự động → hiện hướng dẫn
             StatusText = _applicationService.FirewallHint is not null
                 ? $"⚠️ Server đã chạy nhưng cần mở Firewall thủ công:\n{_applicationService.FirewallHint}"
-                : "Server is running. Share one of the listed IP addresses.";
+                : "Server đang chạy. Chia sẻ địa chỉ IP bên dưới, hoặc bấm \"Tạo Tunnel\" nếu dùng mạng trường.";
         }
         catch (Exception ex)
         {
@@ -258,10 +294,50 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private async Task StopServerAsync()
     {
+        // Dừng tunnel trước khi dừng server
+        if (IsTunnelRunning)
+            await StopTunnelAsync();
+
         await _applicationService.StopServerAsync();
+        IsServerRunning = false;
         HostAddresses.Clear();
         HostAddresses.Add("Server is offline.");
         StatusText = "Server stopped.";
+    }
+
+    private async Task StartTunnelAsync()
+    {
+        StatusText = "⏳ Đang tạo tunnel ngrok... (có thể mất vài giây)";
+        try
+        {
+            var address = await _applicationService.StartTunnelAsync();
+            if (address is not null)
+            {
+                IsTunnelRunning = true;
+                NgrokAddress = address;
+                StatusText = "✅ Tunnel sẵn sàng! Chia sẻ địa chỉ tunnel bên dưới cho bạn bè.";
+            }
+            else
+            {
+                StatusText =
+                    "❌ Không thể tạo tunnel ngrok. " +
+                    "Hãy kiểm tra: (1) ngrok đã được cài đặt chưa? " +
+                    "(2) Đã chạy 'ngrok config add-authtoken <token>' chưa? " +
+                    "Tải ngrok tại https://ngrok.com/download";
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"❌ Lỗi khi tạo tunnel: {ex.Message}";
+        }
+    }
+
+    private async Task StopTunnelAsync()
+    {
+        await _applicationService.StopTunnelAsync();
+        IsTunnelRunning = false;
+        NgrokAddress = string.Empty;
+        StatusText = "Tunnel đã dừng.";
     }
 
     private async Task ConnectAsync()

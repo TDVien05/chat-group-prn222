@@ -9,15 +9,18 @@ public sealed class ChatApplicationService : IAsyncDisposable
     private readonly IChatClient _chatClient;
     private readonly IChatServerHost _chatServerHost;
     private readonly ILocalAddressProvider _localAddressProvider;
+    private readonly INgrokTunnelService _ngrokTunnel;
 
     public ChatApplicationService(
         IChatClient chatClient,
         IChatServerHost chatServerHost,
-        ILocalAddressProvider localAddressProvider)
+        ILocalAddressProvider localAddressProvider,
+        INgrokTunnelService ngrokTunnel)
     {
         _chatClient = chatClient;
         _chatServerHost = chatServerHost;
         _localAddressProvider = localAddressProvider;
+        _ngrokTunnel = ngrokTunnel;
 
         _chatClient.MessageReceived += (_, message) => MessageReceived?.Invoke(this, message);
         _chatClient.ConnectionClosed += (_, reason) => ConnectionClosed?.Invoke(this, reason);
@@ -34,6 +37,27 @@ public sealed class ChatApplicationService : IAsyncDisposable
     public bool IsServerRunning => _chatServerHost.IsRunning;
     public int RunningPort => _chatServerHost.Port;
     public string? FirewallHint => _chatServerHost.FirewallHint;
+
+    // ── ngrok Tunnel ─────────────────────────────────────────────────────────
+
+    public bool IsTunnelRunning => _ngrokTunnel.IsRunning;
+    public string? TunnelAddress => _ngrokTunnel.PublicAddress;
+
+    /// <summary>
+    /// Khởi động tunnel ngrok để bạn bè ngoài mạng nội bộ có thể kết nối.
+    /// Trả về địa chỉ public (ví dụ "0.tcp.ngrok.io:12345") hoặc null nếu thất bại.
+    /// </summary>
+    public async Task<string?> StartTunnelAsync(CancellationToken cancellationToken = default)
+    {
+        if (!IsServerRunning)
+            throw new InvalidOperationException("Hãy khởi động server trước khi tạo tunnel.");
+        return await _ngrokTunnel.StartAsync(RunningPort, cancellationToken);
+    }
+
+    /// <summary>Dừng tunnel ngrok.</summary>
+    public Task StopTunnelAsync() => _ngrokTunnel.StopAsync();
+
+    // ── Addresses ─────────────────────────────────────────────────────────────
 
     public IReadOnlyList<string> GetShareableAddresses()
     {
@@ -96,6 +120,7 @@ public sealed class ChatApplicationService : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        await _ngrokTunnel.StopAsync();
         await _chatClient.DisposeAsync();
         await _chatServerHost.DisposeAsync();
     }

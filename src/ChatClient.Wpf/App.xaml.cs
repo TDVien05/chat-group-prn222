@@ -29,7 +29,8 @@ public partial class App : Application
         var applicationService = new ChatApplicationService(
             new TcpChatClient(),
             new TcpChatServerHost(historyRepository, fileStorage),
-            new LocalAddressProvider());
+            new LocalAddressProvider(),
+            new NgrokTunnelService());
 
         _applicationService = applicationService;
 

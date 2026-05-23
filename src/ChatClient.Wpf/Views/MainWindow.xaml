@@ -139,6 +139,64 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
+
+                            <!-- ── ngrok Tunnel Section ── -->
+                            <Border Margin="0,14,0,0"
+                                    Background="#133A1E"
+                                    CornerRadius="14"
+                                    Padding="14"
+                                    Visibility="{Binding IsServerRunning, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <StackPanel>
+                                    <TextBlock Text="🌐 Internet Tunnel"
+                                               FontSize="14"
+                                               FontWeight="SemiBold"
+                                               Foreground="White" />
+                                    <TextBlock Text="Cho phép bạn bè ngoài mạng trường kết nối vào."
+                                               FontSize="11"
+                                               TextWrapping="Wrap"
+                                               Foreground="#81C784"
+                                               Margin="0,4,0,0" />
+
+                                    <!-- Nút tạo tunnel (hiện khi tunnel chưa chạy) -->
+                                    <Button Content="🚀 Tạo Tunnel (ngrok)"
+                                            Command="{Binding StartTunnelCommand}"
+                                            Background="#2E7D32"
+                                            Visibility="{Binding IsTunnelNotRunning, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                                    <!-- Thông tin tunnel khi đang chạy -->
+                                    <StackPanel Visibility="{Binding IsTunnelRunning, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <TextBlock Text="✅ Tunnel đang chạy — địa chỉ cho bạn bè:"
+                                                   FontSize="11"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="#A5D6A7"
+                                                   Margin="0,10,0,0" />
+                                        <Border Margin="0,6,0,0"
+                                                Padding="10,8"
+                                                Background="#0A2614"
+                                                CornerRadius="10">
+                                            <TextBlock Text="{Binding NgrokAddress}"
+                                                       FontFamily="Consolas"
+                                                       FontSize="13"
+                                                       Foreground="#69F0AE"
+                                                       TextWrapping="Wrap" />
+                                        </Border>
+                                        <Button Content="⏹ Dừng Tunnel"
+                                                Command="{Binding StopTunnelCommand}"
+                                                Background="#B71C1C"
+                                                Margin="0,8,0,0" />
+                                    </StackPanel>
+
+                                    <!-- Ghi chú hướng dẫn cài ngrok -->
+                                    <TextBlock Margin="0,10,0,0"
+                                               FontSize="10"
+                                               Foreground="#4CAF50"
+                                               TextWrapping="Wrap">
+                                        <Run Text="⚙ Yêu cầu: cài ngrok tại " />
+                                        <Run Text="ngrok.com/download" FontWeight="SemiBold" />
+                                        <Run Text=" rồi chạy 'ngrok config add-authtoken &lt;token&gt;' một lần." />
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
                     </Border>
 
