@@ -8,23 +8,23 @@
     "net10.0": []
   },
   "packageFolders": {
-    "C:\\Users\\kietta\\.nuget\\packages\\": {},
+    "C:\\Users\\Duy\\.nuget\\packages\\": {},
     "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\kietta\\Documents\\working\\Chat-Group-Server\\src\\ChatClient.Business\\ChatClient.Business.csproj",
+      "projectUniqueName": "E:\\FPTU\\Semester-7\\PRN222\\lab2\\chat-group-prn222\\src\\ChatClient.Business\\ChatClient.Business.csproj",
       "projectName": "ChatClient.Business",
-      "projectPath": "C:\\Users\\kietta\\Documents\\working\\Chat-Group-Server\\src\\ChatClient.Business\\ChatClient.Business.csproj",
-      "packagesPath": "C:\\Users\\kietta\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\kietta\\Documents\\working\\Chat-Group-Server\\src\\ChatClient.Business\\obj\\",
+      "projectPath": "E:\\FPTU\\Semester-7\\PRN222\\lab2\\chat-group-prn222\\src\\ChatClient.Business\\ChatClient.Business.csproj",
+      "packagesPath": "C:\\Users\\Duy\\.nuget\\packages\\",
+      "outputPath": "E:\\FPTU\\Semester-7\\PRN222\\lab2\\chat-group-prn222\\src\\ChatClient.Business\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
       ],
       "configFilePaths": [
-        "C:\\Users\\kietta\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Users\\Duy\\AppData\\Roaming\\NuGet\\NuGet.Config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],

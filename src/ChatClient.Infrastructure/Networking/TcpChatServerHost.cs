@@ -637,7 +637,7 @@ public sealed class TcpChatServerHost : IChatServerHost
             _jsonOptions = jsonOptions;
             RemoteEndPoint = tcpClient.Client.RemoteEndPoint?.ToString() ?? "unknown";
             var stream = tcpClient.GetStream();
-            Reader = new StreamReader(stream, Encoding.UTF8, bufferSize: 4 * 1024 * 1024); // 4 MB — đủ chứa Base64 của 2 MB chunk
+            Reader = new StreamReader(stream, Encoding.UTF8, bufferSize: 65536); // 64 KB buffer
             Writer = new StreamWriter(stream, new UTF8Encoding(false)) { AutoFlush = true };
         }
 

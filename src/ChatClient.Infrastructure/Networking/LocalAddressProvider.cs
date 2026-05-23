@@ -17,12 +17,10 @@ public sealed class LocalAddressProvider : ILocalAddressProvider
         NetworkInterfaceType.GigabitEthernet,
     ];
 
-    // Từ khóa trong tên / mô tả adapter → đây là adapter ảo, bỏ qua
     private static readonly string[] VirtualKeywords =
     [
         "virtual", "wsl", "hyper-v", "vethernet", "vmware",
-        "virtualbox", "bluetooth", "miniport", "tunnel", "vpn",
-        "tap-", "tap0", "loopback"
+        "virtualbox", "bluetooth", "miniport", "loopback"
     ];
 
     public IReadOnlyList<string> GetIpv4Addresses()

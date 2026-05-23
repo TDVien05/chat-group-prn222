@@ -59,11 +59,11 @@ public sealed class ChatMessageItemViewModel
             TimeLabel   = $"{message.Timestamp.ToLocalTime():HH:mm}{(message.IsHistory ? "  saved" : string.Empty)}",
             BubbleBrush = ResolveBubbleBrush(isSystem, isOwn, isFileReady, isIcon),
             ForegroundBrush = isSystem
-                ? Brushes.White
-                : new SolidColorBrush(Color.FromRgb(20, 54, 84)),
+                ? new SolidColorBrush(Color.FromRgb(100, 116, 139))   // #64748B
+                : (isOwn ? Brushes.White : new SolidColorBrush(Color.FromRgb(30, 41, 59))), // #1E293B
             MetaBrush   = isSystem
-                ? new SolidColorBrush(Color.FromRgb(221, 241, 255))
-                : new SolidColorBrush(Color.FromRgb(101, 128, 153)),
+                ? new SolidColorBrush(Color.FromRgb(148, 163, 184))   // #94A3B8
+                : (isOwn ? new SolidColorBrush(Color.FromRgb(160, 207, 255)) : new SolidColorBrush(Color.FromRgb(148, 163, 184))),
             Alignment   = isSystem || isFileProgress
                 ? HorizontalAlignment.Center
                 : (isOwn ? HorizontalAlignment.Right : HorizontalAlignment.Left),
@@ -83,10 +83,10 @@ public sealed class ChatMessageItemViewModel
     private static Brush ResolveBubbleBrush(bool isSystem, bool isOwn, bool isFileReady, bool isIcon)
     {
         if (isIcon)     return new SolidColorBrush(Color.FromArgb(0, 0, 0, 0)); // trong suốt — chỉ hiện emoji
-        if (isSystem)   return new SolidColorBrush(Color.FromRgb(29, 92, 145));
-        if (isFileReady) return new SolidColorBrush(Color.FromRgb(16, 120, 80));
-        if (isOwn)      return new SolidColorBrush(Color.FromRgb(196, 232, 255));
-        return new SolidColorBrush(Color.FromRgb(240, 248, 255));
+        if (isSystem)   return new SolidColorBrush(Color.FromRgb(241, 245, 249)); // #F1F5F9
+        if (isFileReady) return new SolidColorBrush(Color.FromRgb(16, 185, 129)); // #10B981
+        if (isOwn)      return new SolidColorBrush(Color.FromRgb(0, 120, 212));   // #0078D4
+        return new SolidColorBrush(Color.FromRgb(255, 255, 255));                 // #FFFFFF
     }
 
     private static ImageSource? TryCreateBitmap(string base64Content)

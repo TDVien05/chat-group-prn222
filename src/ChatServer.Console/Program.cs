@@ -59,6 +59,20 @@ foreach (var address in addressProvider.GetIpv4Addresses())
     Console.WriteLine($"  {address}:{port}");
 }
 
+await using var ngrok = new NgrokTunnelService();
+Console.WriteLine("\nStarting Ngrok tunnel (for Internet access)...");
+var publicUrl = await ngrok.StartAsync(port, shutdown.Token);
+if (!string.IsNullOrEmpty(publicUrl))
+{
+    Console.ForegroundColor = ConsoleColor.Cyan;
+    Console.WriteLine($"\n[INTERNET] Public URL for remote clients: {publicUrl}\n");
+    Console.ResetColor();
+}
+else
+{
+    Console.WriteLine("\nNgrok tunnel could not be started. If you want internet access, ensure ngrok is installed and in your PATH.\n");
+}
+
 Console.WriteLine("Press Ctrl+C to stop.");
 
 try

@@ -57,7 +57,7 @@ public sealed class TcpChatClient : IChatClient
         await _tcpClient.ConnectAsync(request.Host, request.Port, cancellationToken);
 
         var stream = _tcpClient.GetStream();
-        _reader = new StreamReader(stream, Encoding.UTF8, bufferSize: 4 * 1024 * 1024); // 4 MB — chứa được Base64 của 2 MB chunk
+        _reader = new StreamReader(stream, Encoding.UTF8, bufferSize: 65536); // 64 KB buffer
         _writer = new StreamWriter(stream, new UTF8Encoding(false)) { AutoFlush = true };
         _connectionCts = new CancellationTokenSource();
 

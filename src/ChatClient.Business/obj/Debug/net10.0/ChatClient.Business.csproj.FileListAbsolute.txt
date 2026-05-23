@@ -22,3 +22,15 @@ C:\Users\kietta\AppData\Local\Temp\chat_wpf_build\ChatClient.Business.pdb
 C:\Users\kietta\AppData\Local\Temp\chat_wpf_build2\ChatClient.Business.deps.json
 C:\Users\kietta\AppData\Local\Temp\chat_wpf_build2\ChatClient.Business.dll
 C:\Users\kietta\AppData\Local\Temp\chat_wpf_build2\ChatClient.Business.pdb
+E:\FPTU\Semester-7\PRN222\lab2\chat-group-prn222\src\ChatClient.Business\bin\Debug\net10.0\ChatClient.Business.deps.json
+E:\FPTU\Semester-7\PRN222\lab2\chat-group-prn222\src\ChatClient.Business\bin\Debug\net10.0\ChatClient.Business.dll
+E:\FPTU\Semester-7\PRN222\lab2\chat-group-prn222\src\ChatClient.Business\bin\Debug\net10.0\ChatClient.Business.pdb
+E:\FPTU\Semester-7\PRN222\lab2\chat-group-prn222\src\ChatClient.Business\obj\Debug\net10.0\ChatClient.Business.GeneratedMSBuildEditorConfig.editorconfig
+E:\FPTU\Semester-7\PRN222\lab2\chat-group-prn222\src\ChatClient.Business\obj\Debug\net10.0\ChatClient.Business.AssemblyInfoInputs.cache
+E:\FPTU\Semester-7\PRN222\lab2\chat-group-prn222\src\ChatClient.Business\obj\Debug\net10.0\ChatClient.Business.AssemblyInfo.cs
+E:\FPTU\Semester-7\PRN222\lab2\chat-group-prn222\src\ChatClient.Business\obj\Debug\net10.0\ChatClient.Business.csproj.CoreCompileInputs.cache
+E:\FPTU\Semester-7\PRN222\lab2\chat-group-prn222\src\ChatClient.Business\obj\Debug\net10.0\ChatClient.Business.sourcelink.json
+E:\FPTU\Semester-7\PRN222\lab2\chat-group-prn222\src\ChatClient.Business\obj\Debug\net10.0\ChatClient.Business.dll
+E:\FPTU\Semester-7\PRN222\lab2\chat-group-prn222\src\ChatClient.Business\obj\Debug\net10.0\refint\ChatClient.Business.dll
+E:\FPTU\Semester-7\PRN222\lab2\chat-group-prn222\src\ChatClient.Business\obj\Debug\net10.0\ChatClient.Business.pdb
+E:\FPTU\Semester-7\PRN222\lab2\chat-group-prn222\src\ChatClient.Business\obj\Debug\net10.0\ref\ChatClient.Business.dll

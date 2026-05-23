@@ -123,6 +123,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ObservableCollection<ChatMessageItemViewModel> Messages { get; } = [];
     public ObservableCollection<string> HostAddresses { get; } = [];
     public ObservableCollection<FileTransferItemViewModel> ActiveTransfers { get; } = [];
+    public ObservableCollection<ParticipantItemViewModel> Participants { get; } = [];
     public IReadOnlyList<EmojiItemViewModel> Emojis { get; }
 
     public AsyncRelayCommand StartServerCommand { get; }
@@ -357,6 +358,8 @@ public sealed class MainWindowViewModel : ViewModelBase
         try
         {
             Messages.Clear();
+            Participants.Clear();
+            Participants.Add(new ParticipantItemViewModel { Name = request.UserName, IsOnline = true });
             await _applicationService.ConnectAsync(request);
             ConnectionBadge = "Connected";
             ActiveRoomTitle = $"#{request.RoomName}";
@@ -496,6 +499,29 @@ public sealed class MainWindowViewModel : ViewModelBase
     {
         Application.Current.Dispatcher.Invoke(() =>
         {
+            // Update Participants list
+            if (!string.IsNullOrWhiteSpace(message.User) && !string.Equals(message.User, "System", StringComparison.OrdinalIgnoreCase))
+            {
+                var p = Participants.FirstOrDefault(x => string.Equals(x.Name, message.User, StringComparison.OrdinalIgnoreCase));
+                if (p == null)
+                {
+                    p = new ParticipantItemViewModel { Name = message.User, IsOnline = true };
+                    Participants.Add(p);
+                }
+
+                if (string.Equals(message.Type, "system", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (message.Content.Contains("left the room", StringComparison.OrdinalIgnoreCase))
+                        p.IsOnline = false;
+                    else if (message.Content.Contains("joined the room", StringComparison.OrdinalIgnoreCase))
+                        p.IsOnline = true;
+                }
+                else if (!string.Equals(message.Type, "left", StringComparison.OrdinalIgnoreCase))
+                {
+                    p.IsOnline = true;
+                }
+            }
+
             if (string.Equals(message.Type, "welcome", StringComparison.OrdinalIgnoreCase)) return;
             if (string.Equals(message.Type, "joined", StringComparison.OrdinalIgnoreCase))
             {
@@ -526,6 +552,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     {
         Application.Current.Dispatcher.Invoke(() =>
         {
+            Participants.Clear();
             ConnectionBadge = "Offline";
             ActiveRoomTitle = "No room connected";
             StatusText = reason;

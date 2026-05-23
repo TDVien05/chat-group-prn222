@@ -61,4 +61,12 @@ public partial class MainWindow : Window
             viewModel.DownloadFile(message.TransferId, message.FileName);
         }
     }
+
+    private void CopyAddress_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.Button btn && btn.Tag is string address)
+        {
+            Clipboard.SetText(address);
+        }
+    }
 }
